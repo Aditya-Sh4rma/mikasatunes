@@ -5,7 +5,7 @@ from typing import Any, Callable, Optional
 from urllib.parse import parse_qs, urlparse
 
 from ..exceptions import DownloadError
-from ..helpers._dataclass import Track
+from ..tools.models import Track
 from ..logging_config import get_logger
 
 logger = get_logger('mikasa.core.youtube')

@@ -10,15 +10,17 @@ from config import Config
 from . import __version__
 from .context import ctx
 from .core.bot import MusicBot
+from .core.cache import prune_cache
 from .core.calls import Player, PyTgCallsBackend
+from .core.dir import ensure_dirs
 from .core.lang import Language
 from .core.mongo import MongoDB
 from .core.telegram import Telegram
 from .core.userbot import AssistantPool
 from .core.youtube import MediaResolver, YouTube
 from .exceptions import MikasaError
-from .helpers._queue import Queue
-from .helpers._thumbnails import Thumbnail
+from .tools.queue import Queue
+from .tools.thumbs import Thumbnail
 from .logging_config import get_logger, setup_logging
 from .plugins import load_plugins
 
@@ -40,6 +42,14 @@ async def run() -> int:
         log.error("startup failed: %s", exc)
         return 2
     ctx.settings = settings
+    try:
+        ensure_dirs()
+    except RuntimeError as exc:
+        log.error("startup failed: %s", exc)
+        return 2
+    report = prune_cache()
+    if report["removed"]:
+        log.info("pruned %d stale thumbnails", report["removed"])
     database = MongoDB(settings.mongo_url)
     language = Language()
     bot = MusicBot(settings)

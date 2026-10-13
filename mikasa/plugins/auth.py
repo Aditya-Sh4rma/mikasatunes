@@ -4,11 +4,11 @@ from html import escape as html_escape
 from pyrogram import filters
 from pyrogram.handlers import MessageHandler
 
-from ..helpers._admins import member_is_admin, reload_admins
+from ..tools.admins import member_is_admin, reload_admins
+from ..tools.users import _mention_of
 from .common import (
     _allowed,
     _is_group,
-    _mention_of,
     _need_database,
     _need_target,
     _t,

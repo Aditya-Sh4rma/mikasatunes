@@ -2,7 +2,7 @@ from pyrogram import enums, filters
 from pyrogram.handlers import MessageHandler
 
 from ..context import ctx
-from ..helpers._inline import help_markup
+from ..tools.buttons import help_markup
 from .common import (
     GROUP_TYPES,
     _bot_name,

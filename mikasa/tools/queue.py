@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Optional
 
-from ._dataclass import MediaItem
+from .models import MediaItem
 
 
 class AddResult(Enum):

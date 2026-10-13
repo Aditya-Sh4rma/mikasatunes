@@ -3,7 +3,7 @@ from typing import Optional
 
 from pymongo import AsyncMongoClient
 
-from ..helpers._dataclass import ChatSettings
+from ..tools.models import ChatSettings
 
 
 class MongoDB:

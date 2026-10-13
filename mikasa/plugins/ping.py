@@ -2,7 +2,7 @@ from pyrogram import filters
 from pyrogram.handlers import MessageHandler
 
 from ..context import ctx
-from ..helpers._utilities import format_uptime
+from ..tools.utils import format_uptime
 from .common import _fail, _t
 
 async def ping_cmd(client, message) -> None:

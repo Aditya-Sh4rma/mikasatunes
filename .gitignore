@@ -1,6 +1,7 @@
 .env
 .env.bak-*
 venv/
+tests/
 cache/
 downloads/
 __pycache__/

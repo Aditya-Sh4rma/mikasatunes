@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageOps
 
 from ..logging_config import get_logger
 
-logger = get_logger('mikasa.helpers.thumbnails')
+logger = get_logger('mikasa.tools.thumbs')
 
 Image.MAX_IMAGE_PIXELS = 25000000
 

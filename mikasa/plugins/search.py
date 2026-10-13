@@ -5,11 +5,11 @@ from pyrogram import filters
 from pyrogram.handlers import CallbackQueryHandler, MessageHandler
 
 from ..context import ctx
-from ..helpers._inline import search_results
+from ..tools.buttons import search_results
+from ..tools.users import _display_user
 from .common import (
     _arguments,
     _deny_blocked,
-    _display_user,
     _fail,
     _is_group,
     _send_resolve_error,

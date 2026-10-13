@@ -2,7 +2,8 @@ from pyrogram import filters
 from pyrogram.handlers import MessageHandler
 
 from ..context import ctx
-from .common import _display_user, _fail, _support_chat, _t, require_control, require_group
+from ..tools.users import _display_user
+from .common import _fail, _support_chat, _t, require_control, require_group
 
 @require_group
 @require_control

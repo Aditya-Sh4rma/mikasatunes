@@ -2,7 +2,8 @@ from pyrogram import filters
 from pyrogram.handlers import MessageHandler
 
 from ..context import ctx
-from .common import _mention_of, _need_database, _need_target, _owner_only, _t
+from ..tools.users import _mention_of
+from .common import _need_database, _need_target, _owner_only, _t
 
 async def sudo_cmd(client, message) -> None:
     if not await _owner_only(client, message):

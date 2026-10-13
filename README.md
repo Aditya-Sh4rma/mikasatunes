@@ -19,7 +19,8 @@ You add the bot to a group, start a voice chat, and use `/play` or `/search`. Th
 ## Requirements
 
 - Python 3.10+
-- `ffmpeg` installed on the system
+- `ffmpeg` installed on the system (must — the bot refuses to start without it)
+- `deno` recommended (only used by the last-resort yt-dlp fallback for tricky YouTube videos; the bot still starts without it)
 - A MongoDB database (local or Atlas)
 - Telegram `API_ID` / `API_HASH` from [my.telegram.org/apps](https://my.telegram.org/apps)
 - A bot token from [@BotFather](https://t.me/BotFather)
@@ -98,11 +99,10 @@ Pause/skip/stop and the buttons under the player card need an admin (or the owne
 ```
 config.py            # all settings, loaded from .env
 mikasa/__main__.py   # startup: db → bot → assistants → plugins
-mikasa/core/         # bot, userbot (assistants), calls (voice), mongo, youtube, telegram, lang
-mikasa/helpers/      # queue, thumbnails, buttons, admins, dataclasses, utils
+mikasa/core/         # bot, userbot, calls (voice), mongo, youtube, telegram, lang, dir, cache
+mikasa/tools/        # models, queue, utils, thumbs, admins, buttons, users, perms
 mikasa/plugins/      # one file per command group, auto-loaded on startup
-mikasa/locales/      # bot reply texts
-tests/               # unit tests — run with: venv/bin/python -m unittest discover -s tests -t .
+mikasa/strings/      # bot reply texts (every language lives here)
 ```
 
 ## Credits

@@ -1,11 +1,11 @@
-from ._admins import (
+from .admins import (
     clear_admin_cache,
     is_owner,
     member_is_admin,
     reload_admins,
 )
-from ._dataclass import ChatSettings, Media, MediaItem, Track
-from ._inline import (
+from .models import ChatSettings, Media, MediaItem, Track
+from .buttons import (
     HELP_TOPICS,
     control_data,
     help_markup,
@@ -16,9 +16,9 @@ from ._inline import (
     select_data,
     start_key,
 )
-from ._queue import AddResult, Queue, QueueState
-from ._thumbnails import Thumbnail
-from ._utilities import (
+from .queue import AddResult, Queue, QueueState
+from .thumbs import Thumbnail
+from .utils import (
     format_duration,
     format_eta,
     format_size,

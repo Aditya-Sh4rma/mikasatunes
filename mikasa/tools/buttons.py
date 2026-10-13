@@ -1,5 +1,6 @@
 from typing import Optional, Tuple
 
+from pyrogram import enums
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 PREFIX = 'mikasa'
@@ -38,11 +39,13 @@ def player_controls(
         toggle = InlineKeyboardButton(
             text('btn_resume', 'Resume'),
             callback_data=control_data('resume', chat_id),
+            style=enums.ButtonStyle.PRIMARY,
         )
     else:
         toggle = InlineKeyboardButton(
             text('btn_pause', 'Pause'),
             callback_data=control_data('pause', chat_id),
+            style=enums.ButtonStyle.PRIMARY,
         )
     rows = [
         [
@@ -50,23 +53,26 @@ def player_controls(
             InlineKeyboardButton(
                 text('btn_skip', 'Skip'),
                 callback_data=control_data('skip', chat_id),
+                style=enums.ButtonStyle.PRIMARY,
             ),
             InlineKeyboardButton(
                 text('btn_stop', 'Stop'),
                 callback_data=control_data('stop', chat_id),
+                style=enums.ButtonStyle.PRIMARY,
             ),
         ],
         [
             InlineKeyboardButton(
                 text('btn_close', 'Close'),
                 callback_data=control_data('close', chat_id),
+                style=enums.ButtonStyle.DANGER,
             )
         ],
     ]
     return InlineKeyboardMarkup(rows)
 
 
-HELP_TOPICS = ('admins', 'auth', 'blist', 'lang', 'ping', 'play', 'queue', 'stats', 'sudo')
+HELP_TOPICS = ('play', 'control', 'seek', 'queue', 'auth', 'admin', 'blist', 'ping', 'stats', 'sudo', 'broadcast', 'system')
 
 
 def start_key(
@@ -87,11 +93,14 @@ def start_key(
             InlineKeyboardButton(
                 text('add_me', 'Add Me'),
                 url=f'https://t.me/{bot_username}?startgroup=true',
+                style=enums.ButtonStyle.PRIMARY,
             )
         ])
     rows.append([
         InlineKeyboardButton(
-            text('btn_help', 'Help and Commands'), callback_data='mikasa:start:help'
+            text('btn_help', 'Help and Commands'),
+            callback_data='mikasa:start:help',
+            style=enums.ButtonStyle.PRIMARY,
         )
     ])
     row = []
@@ -100,17 +109,26 @@ def start_key(
             InlineKeyboardButton(
                 text('owner', 'Owner'),
                 url=f'https://t.me/{owner_username.lstrip("@")}',
+                style=enums.ButtonStyle.PRIMARY,
             )
         )
     if support_chat:
         row.append(
-            InlineKeyboardButton(text('support', 'Support'), url=support_chat)
+            InlineKeyboardButton(
+                text('support', 'Support'),
+                url=support_chat,
+                style=enums.ButtonStyle.PRIMARY,
+            )
         )
     if row:
         rows.append(row)
     if support_channel:
         rows.append([
-            InlineKeyboardButton(text('channel', 'Channel'), url=support_channel)
+            InlineKeyboardButton(
+                text('channel', 'Channel'),
+                url=support_channel,
+                style=enums.ButtonStyle.PRIMARY,
+            )
         ])
     return InlineKeyboardMarkup(rows)
 
@@ -132,16 +150,21 @@ def help_markup(
     if back:
         return InlineKeyboardMarkup([[
             InlineKeyboardButton(
-                labels.get('back') or 'Back', callback_data=back_data
+                labels.get('back') or 'Back',
+                callback_data=back_data,
+                style=enums.ButtonStyle.PRIMARY,
             ),
             InlineKeyboardButton(
-                labels.get('btn_close') or 'Close', callback_data='mikasa:help:close'
+                labels.get('btn_close') or 'Close',
+                callback_data='mikasa:help:close',
+                style=enums.ButtonStyle.DANGER,
             ),
         ]])
     buttons = [
         InlineKeyboardButton(
             labels.get(f'help_{index}') or topic,
             callback_data=topic_data(topic),
+            style=enums.ButtonStyle.PRIMARY,
         )
         for index, topic in enumerate(HELP_TOPICS)
     ]
@@ -149,10 +172,14 @@ def help_markup(
     if menu_back_data is not None:
         rows.append([
             InlineKeyboardButton(
-                labels.get('back') or 'Back', callback_data=menu_back_data
+                labels.get('back') or 'Back',
+                callback_data=menu_back_data,
+                style=enums.ButtonStyle.PRIMARY,
             ),
             InlineKeyboardButton(
-                labels.get('btn_close') or 'Close', callback_data='mikasa:help:close'
+                labels.get('btn_close') or 'Close',
+                callback_data='mikasa:help:close',
+                style=enums.ButtonStyle.DANGER,
             ),
         ])
     return InlineKeyboardMarkup(rows)
@@ -170,12 +197,14 @@ def queue_actions(
             InlineKeyboardButton(
                 add_label,
                 url=f'https://t.me/{bot_username}?startgroup=true',
+                style=enums.ButtonStyle.PRIMARY,
             )
         )
     row.append(
         InlineKeyboardButton(
             close_label,
             callback_data=control_data('close', chat_id),
+            style=enums.ButtonStyle.DANGER,
         )
     )
     return InlineKeyboardMarkup([row])
@@ -196,12 +225,14 @@ def search_results(
             InlineKeyboardButton(
                 label,
                 callback_data=select_data(video_id),
+                style=enums.ButtonStyle.PRIMARY,
             )
         ])
     rows.append([
         InlineKeyboardButton(
             close_label,
             callback_data=control_data('close', chat_id),
+            style=enums.ButtonStyle.DANGER,
         )
     ])
     return InlineKeyboardMarkup(rows)

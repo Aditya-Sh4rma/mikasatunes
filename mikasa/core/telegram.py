@@ -4,7 +4,7 @@ from typing import Any, Awaitable, Callable, Optional
 from urllib.parse import urlparse
 
 from ..exceptions import DownloadError, UnsupportedMedia
-from ..helpers._dataclass import Media
+from ..tools.models import Media
 from .youtube import is_youtube, safe_stem
 
 DIRECT_MEDIA_EXTENSIONS = {

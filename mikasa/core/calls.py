@@ -13,9 +13,9 @@ from pytgcalls.types import (
     VideoQuality,
 )
 
-from ..helpers._dataclass import MediaItem
+from ..tools.models import MediaItem
 from ..exceptions import DownloadError
-from ..helpers._queue import AddResult, Queue
+from ..tools.queue import AddResult, Queue
 from ..logging_config import get_logger
 
 logger = get_logger('mikasa.core.calls')

@@ -2,17 +2,17 @@ from pyrogram import filters
 from pyrogram.handlers import CallbackQueryHandler
 
 from ..context import ctx
-from ..helpers._inline import (
+from ..tools.buttons import (
     HELP_TOPICS,
     help_markup,
     parse_callback,
     player_controls,
 )
+from ..tools.perms import _allowed_user
+from ..tools.users import _display_user
 from .common import (
-    _allowed_user,
     _bot_username,
     _control_labels,
-    _display_user,
     _help_labels,
     _queue_buttons,
     _start_keyboard,

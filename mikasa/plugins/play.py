@@ -10,9 +10,10 @@ from pytgcalls.exceptions import NoActiveGroupCall
 
 from ..context import ctx
 from ..exceptions import DownloadError
-from ..helpers._dataclass import Media, Track
-from ..helpers._inline import player_controls
-from ..helpers._queue import AddResult
+from ..tools.models import Media, Track
+from ..tools.buttons import player_controls
+from ..tools.queue import AddResult
+from ..tools.users import _display_user
 from ..core.telegram import extension_of, is_supported_url
 from ..core.youtube import is_youtube, parse_video_id
 from ..logging_config import get_logger
@@ -23,7 +24,6 @@ from .common import (
     _control_labels,
     _deny_blocked,
     _describe,
-    _display_user,
     _fail,
     _is_group,
     _queue_buttons,
