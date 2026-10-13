@@ -1,0 +1,16 @@
+.env
+.env.bak-*
+venv/
+cache/
+downloads/
+__pycache__/
+*.pyc
+*.session
+*.session-journal
+*.log
+log.txt
+unknown_errors.txt
+errors.txt
+.idea
+.DS_Store
+cookies.txt
