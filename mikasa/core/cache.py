@@ -7,11 +7,6 @@ logger = get_logger("mikasa.core.cache")
 
 
 def prune_cache(cache_dir="cache", max_age_days=30, max_files=500) -> dict:
-    """Remove stale thumbnail files so the disk never fills up silently.
-
-    Deletes files older than max_age_days first, then trims the oldest
-    beyond max_files. Returns a small report dict.
-    """
     directory = Path(cache_dir)
     report = {"removed": 0, "kept": 0}
     if not directory.is_dir():

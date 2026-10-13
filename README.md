@@ -33,8 +33,18 @@ You add the bot to a group, start a voice chat, and use `/play` or `/search`. Th
 git clone https://github.com/Aditya-Sh4rma/mikasamusic.git
 cd mikasamusic
 
-# 2. System packages (Debian/Ubuntu)
-sudo apt update && sudo apt install -y python3-venv ffmpeg
+# 2. System packages (Debian/Ubuntu) — ffmpeg is a must, deno is needed
+#    for the YouTube fallback, so install both together
+sudo apt update && sudo apt install -y python3-venv ffmpeg curl unzip
+curl -fsSL https://deno.land/install.sh | sh
+
+# 2b. Put deno on PATH (the installer drops it in ~/.deno/bin,
+#    which new shells don't know about — without this the bot
+#    won't find it when started from tmux/systemd/cron)
+echo 'export DENO_INSTALL="$HOME/.deno"' >> ~/.bashrc
+echo 'export PATH="$DENO_INSTALL/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+deno --version   # should print a version, not "command not found"
 
 # 3. Virtual environment + dependencies
 python3 -m venv venv
