@@ -117,8 +117,9 @@ Pause/skip/stop and the buttons under the player card need an admin (or the owne
 
 ```
 config.py            # all settings, loaded from .env
-mikasa/__main__.py   # startup: db → bot → assistants → plugins
-mikasa/core/         # bot, userbot, calls (voice), db, youtube, telegram, lang, dir, cache
+mikasa/__main__.py   # thin entrypoint, calls boot()
+mikasa/boot.py       # startup: db → bot → assistants → plugins
+mikasa/core/         # bot, userbot, calls (voice), db, youtube, telegram, lang, dir, watch
 mikasa/tools/        # models, queue, utils, thumbs, admins, buttons, users, perms
 mikasa/plugins/      # one file per command group, auto-loaded on startup
 strings/             # bot reply texts (every language lives here)
