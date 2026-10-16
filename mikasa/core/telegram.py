@@ -1,8 +1,3 @@
-# Copyright (c) 2026 Aditya-Sh4rma
-# Licensed under the MIT License.
-# This file is part of MikasaMusic
-
-
 import hashlib
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional

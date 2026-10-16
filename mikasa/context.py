@@ -1,8 +1,3 @@
-# Copyright (c) 2026 Aditya-Sh4rma
-# Licensed under the MIT License.
-# This file is part of MikasaMusic
-
-
 class AppContext:
     def __init__(self) -> None:
         self.settings = None
