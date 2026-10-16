@@ -50,10 +50,7 @@ MediaItem = Union[Track, Media]
 @dataclass
 class ChatSettings:
     language: str = "en"
-    loop: int = 0
-    paused: bool = False
     assistant: int = 0
-    autoplay: bool = False
 
     def to_document(self) -> dict:
         return asdict(self)
@@ -62,8 +59,5 @@ class ChatSettings:
     def from_document(cls, document: dict) -> "ChatSettings":
         return cls(
             language=str(document.get("language", "en")),
-            loop=int(document.get("loop", 0)),
-            paused=bool(document.get("paused", False)),
             assistant=int(document.get("assistant", 0)),
-            autoplay=bool(document.get("autoplay", False)),
         )

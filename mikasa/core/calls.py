@@ -13,7 +13,8 @@ from pytgcalls.types import (
     VideoQuality,
 )
 
-from ..tools.models import MediaItem
+from ..tools.models import MediaItem, Track
+from ..tools.utils import normalize_title
 from ..exceptions import DownloadError
 from ..tools.queue import AddResult, Queue
 from ..logging_config import get_logger
@@ -201,12 +202,18 @@ class Player:
         resolver: Optional[Resolver] = None,
         temp_root: Optional[Path] = None,
         database=None,
+        youtube=None,
+        duration_limit: int = 0,
+        on_track_start=None,
     ) -> None:
         self._pool = pool
         self._queue = queue
         self._backend_factory = backend_factory
         self._resolver = resolver
         self._database = database
+        self._youtube = youtube
+        self._duration_limit = max(0, int(duration_limit or 0))
+        self._on_track_start = on_track_start
         self._temp_root = Path(temp_root) if temp_root else Path('downloads')
         self._current: dict[int, MediaItem] = {}
         self._paused: set[int] = set()
@@ -214,6 +221,10 @@ class Player:
         self._backends: dict[int, PlaybackBackend] = {}
         self._owned: dict[int, set] = {}
         self._locks: dict[int, asyncio.Lock] = {}
+        self._loop: dict[int, int] = {}
+        self._autoplay: set[int] = set()
+        self._last: dict[int, MediaItem] = {}
+        self._recent: dict[int, dict] = {}
         self._closed = False
 
     def _lock(self, chat_id: int) -> asyncio.Lock:
@@ -332,24 +343,90 @@ class Player:
                 await self._pool.release(chat_id)
             return played
 
-    async def _consume_loop(self, chat_id: int) -> bool:
-        database = self._database
-        if database is None:
-            return False
+    def loop_count(self, chat_id: int) -> int:
+        return self._loop.get(chat_id, 0)
+
+    def set_loop(self, chat_id: int, count: int) -> int:
         try:
-            settings = await database.chat_settings(chat_id)
-        except Exception:
-            return False
-        remaining = int(getattr(settings, 'loop', 0) or 0)
+            count = int(count)
+        except (TypeError, ValueError):
+            count = 0
+        count = max(0, min(10, count))
+        if count:
+            self._loop[chat_id] = count
+        else:
+            self._loop.pop(chat_id, None)
+        return count
+
+    def autoplay_enabled(self, chat_id: int) -> bool:
+        return chat_id in self._autoplay
+
+    def set_autoplay(self, chat_id: int, enabled: bool) -> bool:
+        if enabled:
+            self._autoplay.add(chat_id)
+        else:
+            self._autoplay.discard(chat_id)
+            self._recent.pop(chat_id, None)
+        return enabled
+
+    async def _consume_loop(self, chat_id: int) -> bool:
+        remaining = self._loop.get(chat_id, 0)
         if remaining <= 0:
             return False
-        settings.loop = remaining - 1
-        try:
-            await database.save_chat(chat_id, settings)
-        except Exception as exc:
-            logger.warning('loop store failed for %s: %s', chat_id, type(exc).__name__)
-            return False
+        remaining -= 1
+        if remaining:
+            self._loop[chat_id] = remaining
+        else:
+            self._loop.pop(chat_id, None)
         return True
+
+    async def _next_autoplay(self, chat_id: int) -> Optional[MediaItem]:
+        if chat_id not in self._autoplay:
+            return None
+        youtube = self._youtube
+        if youtube is None:
+            return None
+        last = self._last.get(chat_id)
+        if not isinstance(last, Track) or not last.video_id:
+            return None
+        recent = self._recent.setdefault(chat_id, {})
+        recent.setdefault(last.video_id, normalize_title(last.title))
+        seen_ids = set(recent)
+        seen_titles = {title for title in recent.values() if title}
+        candidates: list = []
+        try:
+            candidates = await youtube.related(last.video_id, limit=10)
+        except Exception as exc:
+            logger.warning('autoplay related failed for %s: %s', chat_id, type(exc).__name__)
+            candidates = []
+        picked = self._pick_autoplay(candidates, seen_ids, seen_titles)
+        if picked is None:
+            try:
+                candidates = await youtube.search(last.title, limit=10)
+            except Exception as exc:
+                logger.warning('autoplay search failed for %s: %s', chat_id, type(exc).__name__)
+                return None
+            picked = self._pick_autoplay(candidates, seen_ids, seen_titles)
+        if picked is None:
+            return None
+        picked.requested_by = 'autoplay'
+        recent[picked.video_id] = normalize_title(getattr(picked, 'title', ''))
+        while len(recent) > 30:
+            recent.pop(next(iter(recent)))
+        return picked
+
+    def _pick_autoplay(self, candidates, seen_ids, seen_titles) -> Optional[MediaItem]:
+        for track in candidates or []:
+            video_id = getattr(track, 'video_id', '') or ''
+            if not video_id or video_id in seen_ids:
+                continue
+            normalized = normalize_title(getattr(track, 'title', ''))
+            if normalized and normalized in seen_titles:
+                continue
+            if self._duration_limit and (getattr(track, 'duration_seconds', 0) or 0) > self._duration_limit:
+                continue
+            return track
+        return None
 
     async def advance(self, chat_id: int) -> bool:
         async with self._lock(chat_id):
@@ -428,6 +505,10 @@ class Player:
             await self._queue.clear(chat_id)
             await self._pool.release(chat_id)
             self._paused.discard(chat_id)
+            self._loop.pop(chat_id, None)
+            self._autoplay.discard(chat_id)
+            self._last.pop(chat_id, None)
+            self._recent.pop(chat_id, None)
             return True
 
     async def pause(self, chat_id: int) -> bool:
@@ -494,6 +575,10 @@ class Player:
         self._positions.clear()
         self._backends.clear()
         self._owned.clear()
+        self._loop.clear()
+        self._autoplay.clear()
+        self._last.clear()
+        self._recent.clear()
 
     def _cleanup_temp_root(self) -> None:
         if not self._temp_root.exists():
@@ -514,7 +599,9 @@ class Player:
         while True:
             item = await self._queue.pop_next(chat_id)
             if item is None:
-                return False
+                item = await self._next_autoplay(chat_id)
+                if item is None:
+                    return False
             try:
                 path = await self._ensure_file(chat_id, item)
                 await backend.play(chat_id, str(path), bool(getattr(item, 'is_video', False)))
@@ -526,9 +613,16 @@ class Player:
                 await self._discard_file(chat_id, item)
                 continue
             self._current[chat_id] = item
+            self._last[chat_id] = item
             self._paused.discard(chat_id)
             self._positions[chat_id] = [0.0, time.monotonic()]
             await self._store_slot(chat_id, state.slot)
+            callback = self._on_track_start
+            if callback is not None:
+                try:
+                    await callback(chat_id, item)
+                except Exception as exc:
+                    logger.warning('track start hook failed for %s: %s', chat_id, type(exc).__name__)
             return True
 
     async def _ensure_file(self, chat_id: int, item: MediaItem) -> Path:

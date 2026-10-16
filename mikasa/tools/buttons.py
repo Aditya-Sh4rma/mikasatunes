@@ -5,7 +5,7 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 PREFIX = 'mikasa'
 
-ACTIONS = ('pause', 'resume', 'skip', 'stop', 'close')
+ACTIONS = ('pause', 'resume', 'skip', 'stop', 'close', 'status')
 
 
 def control_data(action: str, chat_id: int) -> str:
@@ -29,12 +29,22 @@ def player_controls(
     chat_id: int,
     paused: bool = False,
     labels: Optional[dict] = None,
+    timer: Optional[str] = None,
 ) -> InlineKeyboardMarkup:
     labels = labels or {}
 
     def text(key: str, default: str) -> str:
         return labels.get(key) or default
 
+    rows = []
+    if timer:
+        rows.append([
+            InlineKeyboardButton(
+                timer,
+                callback_data=control_data('status', chat_id),
+                style=enums.ButtonStyle.PRIMARY,
+            )
+        ])
     if paused:
         toggle = InlineKeyboardButton(
             text('btn_resume', 'Resume'),
@@ -47,7 +57,7 @@ def player_controls(
             callback_data=control_data('pause', chat_id),
             style=enums.ButtonStyle.PRIMARY,
         )
-    rows = [
+    rows.extend([
         [
             toggle,
             InlineKeyboardButton(
@@ -68,7 +78,7 @@ def player_controls(
                 style=enums.ButtonStyle.DANGER,
             )
         ],
-    ]
+    ])
     return InlineKeyboardMarkup(rows)
 
 
@@ -212,6 +222,43 @@ def queue_actions(
 
 def select_data(video_id: str) -> str:
     return f'{PREFIX}:select:{video_id}'
+
+
+def lang_data(code: str) -> str:
+    return f'{PREFIX}:lang:{code}'
+
+
+def lang_markup(
+    chat_id: int,
+    current: str = '',
+    names: Optional[dict] = None,
+    close_label: str = 'Close',
+) -> InlineKeyboardMarkup:
+    names = names or {}
+    codes = sorted(names)
+    rows = []
+    for index in range(0, len(codes), 2):
+        row = []
+        for code in codes[index:index + 2]:
+            label = names[code]
+            if code == current:
+                label = f'[ {label} ]'
+            row.append(
+                InlineKeyboardButton(
+                    label,
+                    callback_data=lang_data(code),
+                    style=enums.ButtonStyle.PRIMARY,
+                )
+            )
+        rows.append(row)
+    rows.append([
+        InlineKeyboardButton(
+            close_label,
+            callback_data=control_data('close', chat_id),
+            style=enums.ButtonStyle.DANGER,
+        )
+    ])
+    return InlineKeyboardMarkup(rows)
 
 
 def search_results(

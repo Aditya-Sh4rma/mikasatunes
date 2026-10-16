@@ -2,7 +2,12 @@ import json
 from pathlib import Path
 
 DEFAULT_LANGUAGE = "en"
-LOCALES_DIR = Path(__file__).resolve().parent.parent / "strings"
+LOCALES_DIR = Path(__file__).resolve().parent.parent.parent / "strings"
+
+LANG_NAMES = {
+    "en": "English",
+    "bur": "မြန်မာ",
+}
 
 
 class Language:
@@ -10,9 +15,53 @@ class Language:
         self._dir = Path(locales_dir) if locales_dir else LOCALES_DIR
         self._default = default
         self._cache: dict[str, dict] = {}
+        self._chat_cache: dict[int, str] = {}
+        self._known: list[str] | None = None
 
     def available(self) -> list[str]:
-        return sorted(path.stem for path in self._dir.glob("*.json"))
+        if self._known is None:
+            self._known = sorted(path.stem for path in self._dir.glob("*.json"))
+        return list(self._known)
+
+    def available_names(self) -> dict[str, str]:
+        return {
+            code: LANG_NAMES.get(code, code)
+            for code in self.available()
+            if code in LANG_NAMES
+        }
+
+    def cached(self, chat_id: int) -> str:
+        try:
+            return self._chat_cache.get(int(chat_id), "")
+        except (TypeError, ValueError):
+            return ""
+
+    def set_cached(self, chat_id: int, code: str) -> None:
+        try:
+            self._chat_cache[int(chat_id)] = (code or "").lower()
+        except (TypeError, ValueError):
+            pass
+
+    async def for_chat(self, chat_id: int, database=None) -> str:
+        try:
+            key = int(chat_id)
+        except (TypeError, ValueError):
+            return ""
+        known = self._chat_cache.get(key, "")
+        if known:
+            return known
+        code = ""
+        if database is not None:
+            try:
+                settings = await database.chat_settings(key)
+                code = str(getattr(settings, "language", "") or "").lower()
+            except Exception:
+                code = ""
+        if code not in self.available():
+            code = ""
+        if code:
+            self._chat_cache[key] = code
+        return code
 
     def strings(self, code: str = None) -> dict:
         code = (code or self._default).lower()

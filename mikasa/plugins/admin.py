@@ -5,7 +5,7 @@ from pyrogram.handlers import MessageHandler
 
 from ..context import ctx
 from ..logging_config import get_logger
-from .common import _bot_name, _need_database, _owner_only, _t
+from .common import _bot_name, _need_database, _owner_only, _set_lang, _t
 
 logger = get_logger('mikasa.plugins.admin')
 
@@ -50,6 +50,7 @@ async def _run_eval(code: str) -> str:
 
 
 async def eval_cmd(client, message) -> None:
+    await _set_lang(message)
     import asyncio
 
     if not await _owner_only(client, message):
@@ -67,6 +68,7 @@ async def eval_cmd(client, message) -> None:
 
 
 async def logs_cmd(client, message) -> None:
+    await _set_lang(message)
     import os
 
     if not await _owner_only(client, message):
@@ -93,6 +95,7 @@ async def logs_cmd(client, message) -> None:
 
 
 async def logger_cmd(client, message) -> None:
+    await _set_lang(message)
     if not await _owner_only(client, message):
         return
     command = (getattr(message, 'command', None) or [''])[0]
@@ -156,6 +159,7 @@ async def _graceful_stop() -> None:
 
 
 async def restart_cmd(client, message) -> None:
+    await _set_lang(message)
     import asyncio
 
     if not await _owner_only(client, message):

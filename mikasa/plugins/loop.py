@@ -2,22 +2,20 @@ from pyrogram import filters
 from pyrogram.handlers import MessageHandler
 
 from ..context import ctx
-from .common import _need_database, _t, require_control, require_group
+from .common import _t, require_control, require_group
 
 @require_group
 @require_control
 async def loop_cmd(client, message) -> None:
     chat_id = message.chat.id
-    if await ctx.controller.current(chat_id) is None:
+    controller = getattr(ctx, 'controller', None)
+    if controller is None or await controller.current(chat_id) is None:
         await message.reply_text(_t('not_playing'))
-        return
-    database = await _need_database(message)
-    if database is None:
         return
     args = (getattr(message, 'command', None) or [])[1:]
     if not args:
         try:
-            count = int(getattr(await database.chat_settings(chat_id), 'loop', 0) or 0)
+            count = int(controller.loop_count(chat_id))
         except Exception:
             await message.reply_text(_t('error'))
             return
@@ -39,9 +37,7 @@ async def loop_cmd(client, message) -> None:
         await message.reply_text(_t('loop_usage'))
         return
     try:
-        settings = await database.chat_settings(chat_id)
-        settings.loop = count
-        await database.save_chat(chat_id, settings)
+        count = controller.set_loop(chat_id, count)
     except Exception:
         await message.reply_text(_t('error'))
         return

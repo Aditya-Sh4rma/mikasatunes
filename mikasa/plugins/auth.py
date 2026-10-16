@@ -11,6 +11,7 @@ from .common import (
     _is_group,
     _need_database,
     _need_target,
+    _set_lang,
     _t,
 )
 
@@ -18,6 +19,7 @@ _rel_hist: dict[int, float] = {}
 
 
 async def auth_cmd(client, message) -> None:
+    await _set_lang(message)
     if not _is_group(message):
         await message.reply_text(_t('unsupported'))
         return
@@ -55,6 +57,7 @@ async def auth_cmd(client, message) -> None:
 
 
 async def authlist_cmd(client, message) -> None:
+    await _set_lang(message)
     if not _is_group(message):
         await message.reply_text(_t('unsupported'))
         return
@@ -79,6 +82,7 @@ async def authlist_cmd(client, message) -> None:
 
 
 async def reload_cmd(client, message) -> None:
+    await _set_lang(message)
     if not _is_group(message):
         await message.reply_text(_t('unsupported'))
         return

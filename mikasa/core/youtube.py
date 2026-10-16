@@ -104,9 +104,11 @@ class YouTube:
         shruti_key: Optional[str] = None,
         cache_dir: str = DOWNLOAD_DIR,
         playlist_factory: Optional[Callable[[str], Any]] = None,
+        related_factory: Optional[Callable[[str, int], Any]] = None,
     ) -> None:
         self._search_factory = search_factory
         self._playlist_factory = playlist_factory
+        self._related_factory = related_factory
         self._downloader = downloader
         self._cookies_file = cookies_file
         self._api_url = (api_url or '').strip().rstrip('/')
@@ -165,6 +167,27 @@ class YouTube:
         tracks: list[Track] = []
         for video in videos:
             track = self._video_to_track(video) if isinstance(video, dict) else None
+            if track is not None:
+                tracks.append(track)
+            if len(tracks) >= limit:
+                break
+        return tracks
+
+    async def related(self, video_id: str, limit: int = 10) -> list[Track]:
+        video_id = (video_id or '').strip()
+        if not video_id or limit < 1:
+            return []
+        factory = self._related_factory or self._default_related_factory
+        try:
+            result = factory(video_id, limit)
+            if inspect.isawaitable(result):
+                result = await result
+        except Exception:
+            return []
+        components = result.get('result', []) if isinstance(result, dict) else []
+        tracks: list[Track] = []
+        for component in components:
+            track = self._to_track(component)
             if track is not None:
                 tracks.append(track)
             if len(tracks) >= limit:
@@ -247,6 +270,14 @@ class YouTube:
                 pass
             return None
         return result
+
+    @staticmethod
+    async def _default_related_factory(video_id: str, limit: int) -> Any:
+        from py_yt import Recommendations
+        return await Recommendations.get_related(
+            f'https://www.youtube.com/watch?v={video_id}',
+            limit=limit,
+        )
 
     @staticmethod
     def _default_search_factory(query: str, limit: int) -> Any:

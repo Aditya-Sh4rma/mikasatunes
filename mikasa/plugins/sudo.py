@@ -3,9 +3,10 @@ from pyrogram.handlers import MessageHandler
 
 from ..context import ctx
 from ..tools.users import _mention_of
-from .common import _need_database, _need_target, _owner_only, _t
+from .common import _need_database, _need_target, _owner_only, _set_lang, _t
 
 async def sudo_cmd(client, message) -> None:
+    await _set_lang(message)
     if not await _owner_only(client, message):
         return
     database = await _need_database(message)
@@ -56,6 +57,7 @@ async def _resolve_mention(client, user_id: int) -> str:
 
 
 async def sudolist_cmd(client, message) -> None:
+    await _set_lang(message)
     database = getattr(ctx, 'database', None)
     settings = ctx.settings
     owner_id = getattr(settings, 'owner_id', 0) if settings is not None else 0

@@ -7,6 +7,7 @@ from .common import (
     GROUP_TYPES,
     _bot_name,
     _help_labels,
+    _set_lang,
     _start_keyboard,
     _start_pm_caption,
     _t,
@@ -14,6 +15,7 @@ from .common import (
 )
 
 async def start_cmd(client, message) -> None:
+    await _set_lang(message)
     user = getattr(message, 'from_user', None)
     chat = getattr(message, 'chat', None)
     chat_type = getattr(chat, 'type', None) if chat is not None else None
@@ -39,6 +41,7 @@ async def start_cmd(client, message) -> None:
 
 
 async def help_cmd(client, message) -> None:
+    await _set_lang(message)
     await message.reply_text(_t('help_menu'), reply_markup=help_markup(_help_labels()))
 
 

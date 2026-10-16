@@ -4,9 +4,10 @@ from pyrogram import filters
 from pyrogram.handlers import MessageHandler
 
 from ..context import ctx
-from .common import _owner_only, _t
+from .common import _owner_only, _set_lang, _t
 
 async def active_cmd(client, message) -> None:
+    await _set_lang(message)
     if not await _owner_only(client, message):
         return
     controller = getattr(ctx, 'controller', None)

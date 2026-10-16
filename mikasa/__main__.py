@@ -13,9 +13,10 @@ from .core.bot import MusicBot
 from .core.cache import prune_cache
 from .core.calls import Player, PyTgCallsBackend
 from .core.dir import ensure_dirs
+from .core.timer import start_timer
 from .core.watch import start_watchers, stop_watchers
 from .core.lang import Language
-from .core.mongo import MongoDB
+from .core.db import MongoDB
 from .core.telegram import Telegram
 from .core.userbot import AssistantPool
 from .core.youtube import MediaResolver, YouTube
@@ -77,6 +78,16 @@ async def run() -> int:
         if controller is not None:
             await controller.advance(chat_id)
 
+    async def on_track_start(chat_id: int, item) -> None:
+        if getattr(item, 'requested_by', '') != 'autoplay':
+            return
+        from .plugins.autoplay import announce_autoplay
+
+        try:
+            await announce_autoplay(chat_id, item)
+        except Exception as exc:
+            log.warning('autoplay announce failed for %s: %s', chat_id, type(exc).__name__)
+
     def backend_factory(state):
         backend = backends.get(state.slot)
         if backend is None:
@@ -95,6 +106,9 @@ async def run() -> int:
         resolver=resolver,
         temp_root=Path('downloads'),
         database=database,
+        youtube=youtube,
+        duration_limit=settings.duration_limit,
+        on_track_start=on_track_start,
     )
     ctx.started_at = time.time()
     ctx.queue = queue
@@ -132,14 +146,15 @@ async def run() -> int:
     log.info("assistants: %s", [state.label for state in assistants.ready()])
 
     async def _auto_left_notify(chat_id: int) -> None:
-        from .plugins.common import _t
+        from .plugins.common import _tc
 
         try:
-            await bot.send_message(chat_id, _t('auto_left'))
+            await bot.send_message(chat_id, _tc(chat_id, 'auto_left'))
         except Exception:
             pass
 
     watchers = start_watchers(settings, assistants, player, _auto_left_notify)
+    watchers.append(start_timer(bot, player, language, settings.default_language or "en"))
     try:
         await idle()
     finally:

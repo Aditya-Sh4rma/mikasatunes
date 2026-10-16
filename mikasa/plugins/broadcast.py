@@ -1,7 +1,7 @@
 from pyrogram import filters
 from pyrogram.handlers import MessageHandler
 
-from .common import _need_database, _owner_only, _t
+from .common import _need_database, _owner_only, _set_lang, _t
 
 _broadcast_lock = None
 
@@ -16,6 +16,7 @@ def _broadcast_lock_holder():
 
 
 async def broadcast_cmd(client, message) -> None:
+    await _set_lang(message)
     import asyncio
 
     if not await _owner_only(client, message):

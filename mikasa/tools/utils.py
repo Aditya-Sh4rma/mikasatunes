@@ -1,3 +1,7 @@
+import re
+import unicodedata
+
+
 def format_duration(seconds: int) -> str:
     seconds = max(0, int(seconds))
     hours, remainder = divmod(seconds, 3600)
@@ -36,6 +40,25 @@ def progress_bar(current: int, total: int, width: int = 12) -> str:
     ratio = max(0.0, min(1.0, current / total))
     filled = int(width * ratio)
     return "#" * filled + "-" * (width - filled)
+
+
+PROGRESS_WIDTH = 10
+
+
+def progress_text(played_seconds: int, total_seconds: int) -> str:
+    try:
+        total = int(total_seconds)
+    except (TypeError, ValueError):
+        return ""
+    if total <= 0:
+        return ""
+    try:
+        played = max(0, int(played_seconds))
+    except (TypeError, ValueError):
+        played = 0
+    pos = min(int((min(played, total) / total) * PROGRESS_WIDTH), PROGRESS_WIDTH - 1)
+    bar = "—" * pos + "◉" + "—" * (PROGRESS_WIDTH - pos - 1)
+    return f"{format_duration(played)} {bar} {format_duration(total)}"
 
 
 def format_uptime(seconds: int) -> str:
@@ -79,3 +102,35 @@ def safe_stem(title: str, video_id: str) -> str:
     if not cleaned:
         cleaned = video_id
     return f'{cleaned} [{video_id}]'
+
+
+_NOISE_WORDS = frozenset({
+    'official', 'video', 'audio', 'lyric', 'lyrics', 'song', 'songs',
+    'hd', 'hq', '4k', '8d', 'mv', 'visualizer', 'cover',
+})
+
+
+def normalize_title(title: str) -> str:
+    text = (title or '').lower()
+    text = re.sub(r'\([^)]*\)', ' ', text)
+    text = re.sub(r'\[[^\]]*\]', ' ', text)
+    words = []
+    current: list = []
+
+    def flush() -> None:
+        word = ''.join(current).strip('_')
+        del current[:]
+        if not word or word in _NOISE_WORDS:
+            return
+        if not any(ch.isalnum() for ch in word):
+            return
+        words.append(word)
+
+    for ch in text:
+        if ch.isalnum() or ch == '_' or unicodedata.category(ch).startswith('M'):
+            current.append(ch)
+        elif current:
+            flush()
+    if current:
+        flush()
+    return ' '.join(words)

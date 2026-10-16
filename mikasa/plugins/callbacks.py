@@ -10,11 +10,13 @@ from ..tools.buttons import (
 )
 from ..tools.perms import _allowed_user
 from ..tools.users import _display_user
+from ..tools.utils import progress_text
 from .common import (
     _bot_username,
     _control_labels,
     _help_labels,
     _queue_buttons,
+    _set_lang,
     _start_keyboard,
     _start_pm_caption,
     _t,
@@ -35,6 +37,7 @@ async def _refresh_markup(query, chat_id: int, paused: bool) -> None:
 
 
 async def control_cb(client, query) -> None:
+    await _set_lang(query)
     action, chat_id = parse_callback(getattr(query, 'data', ''))
     if action is None or chat_id is None:
         return
@@ -50,6 +53,20 @@ async def control_cb(client, query) -> None:
     user = getattr(query, 'from_user', None)
     if user is None:
         await query.answer(_t('not_admin'), show_alert=True)
+        return
+    if action == 'status':
+        controller = ctx.controller
+        item = await controller.current(chat_id) if controller is not None else None
+        if item is None:
+            await query.answer(_t('not_playing'), show_alert=True)
+            return
+        try:
+            played = int(controller.position(chat_id))
+        except Exception:
+            played = 0
+        total = int(getattr(item, 'duration_seconds', 0) or 0)
+        text = progress_text(played, total) or _t('not_playing')
+        await query.answer(text, show_alert=True)
         return
     allowed, key = await _allowed_user(client, chat_id, user.id)
     if not allowed:
@@ -125,6 +142,7 @@ async def control_cb(client, query) -> None:
 
 
 async def help_cb(client, query) -> None:
+    await _set_lang(query)
     data = getattr(query, 'data', '') or ''
     message = getattr(query, 'message', None)
     if data == 'mikasa:help':
@@ -176,6 +194,7 @@ async def help_cb(client, query) -> None:
 
 
 async def start_cb(client, query) -> None:
+    await _set_lang(query)
     data = getattr(query, 'data', '') or ''
     message = getattr(query, 'message', None)
     if data == 'mikasa:start:help':

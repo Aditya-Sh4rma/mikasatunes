@@ -13,6 +13,7 @@ from .common import (
     _fail,
     _is_group,
     _send_resolve_error,
+    _set_lang,
     _support_chat,
     _t,
 )
@@ -43,6 +44,7 @@ def remember_search(chat_id: int, tracks) -> None:
 
 
 async def search_cmd(client, message) -> None:
+    await _set_lang(message)
     if not _is_group(message):
         await message.reply_text(_t('unsupported'))
         return
@@ -77,6 +79,7 @@ async def search_cmd(client, message) -> None:
 
 
 async def select_cb(client, query) -> None:
+    await _set_lang(query)
     data = getattr(query, 'data', '') or ''
     parts = data.split(':')
     if len(parts) != 3 or parts[0] != 'mikasa' or parts[1] != 'select':

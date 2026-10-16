@@ -1,9 +1,10 @@
 from pyrogram import filters
 from pyrogram.handlers import MessageHandler
 
-from .common import _need_database, _owner_only, _t
+from .common import _need_database, _owner_only, _set_lang, _t
 
 async def blacklist_cmd(client, message) -> None:
+    await _set_lang(message)
     if not await _owner_only(client, message):
         return
     command = (getattr(message, 'command', None) or [''])[0]

@@ -2,9 +2,10 @@ from pyrogram import filters
 from pyrogram.handlers import MessageHandler
 
 from ..context import ctx
-from .common import _bot_name, _is_group, _t
+from .common import _bot_name, _is_group, _set_lang, _t
 
 async def stats_cmd(client, message) -> None:
+    await _set_lang(message)
     import platform
     import sys
 

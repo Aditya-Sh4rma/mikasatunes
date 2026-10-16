@@ -28,6 +28,7 @@ from .common import (
     _is_group,
     _queue_buttons,
     _send_resolve_error,
+    _set_lang,
     _support_chat,
     _t,
 )
@@ -196,7 +197,8 @@ async def _announce_now_playing(sent, message, item, duration: str, user: str) -
             return
         except Exception as exc:
             logger.warning('announce edit failed: %s', type(exc).__name__)
-    await message.reply_text(text, reply_markup=markup)
+    sent_msg = await message.reply_text(text, reply_markup=markup)
+    item.message_id = getattr(sent_msg, 'id', 0) or 0
 
 
 async def _maybe_play_log(message, item) -> None:
@@ -249,6 +251,7 @@ async def vplayforce(client, message) -> None:
 
 
 async def _play_impl(client, message, video: bool = False, force: bool = False) -> None:
+    await _set_lang(message)
     if not _is_group(message):
         await message.reply_text(_t('unsupported'))
         return

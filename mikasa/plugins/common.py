@@ -1,3 +1,4 @@
+from contextvars import ContextVar
 from functools import wraps
 from html import escape as html_escape
 
@@ -14,6 +15,8 @@ from ..tools.utils import format_duration, format_uptime
 
 logger = get_logger('mikasa.plugins.common')
 
+_current_lang: ContextVar[str] = ContextVar('mikasa_lang', default='')
+
 GROUP_TYPES = (enums.ChatType.GROUP, enums.ChatType.SUPERGROUP, enums.ChatType.FORUM)
 VIDEO_EXTENSIONS = {'.mp4', '.mkv', '.mov', '.webm', '.m4v'}
 
@@ -23,8 +26,39 @@ def _t(key: str, **kwargs) -> str:
     if language is None:
         return key
     settings = ctx.settings
-    code = getattr(settings, 'default_language', None) or 'en'
+    code = _current_lang.get() or getattr(settings, 'default_language', None) or 'en'
     return language.text(code, key, **kwargs)
+
+
+def _tc(chat_id: int, key: str, **kwargs) -> str:
+    language = ctx.language
+    if language is None:
+        return key
+    settings = ctx.settings
+    code = language.cached(chat_id) or getattr(settings, 'default_language', None) or 'en'
+    return language.text(code, key, **kwargs)
+
+
+async def _set_lang(update) -> str:
+    chat_id = None
+    message = getattr(update, 'message', None)
+    if message is not None and getattr(message, 'chat', None) is not None:
+        chat_id = getattr(message.chat, 'id', None)
+    else:
+        chat = getattr(update, 'chat', None)
+        if chat is not None:
+            chat_id = getattr(chat, 'id', None)
+    settings = ctx.settings
+    default = getattr(settings, 'default_language', None) or 'en'
+    code = ''
+    language = ctx.language
+    if chat_id is not None and language is not None:
+        try:
+            code = await language.for_chat(chat_id, getattr(ctx, 'database', None))
+        except Exception:
+            code = ''
+    _current_lang.set(code or default)
+    return code or default
 
 
 def _is_group(message) -> bool:
@@ -207,6 +241,7 @@ async def _owner_only(client, message) -> bool:
 def require_group(func):
     @wraps(func)
     async def wrapper(client, message):
+        await _set_lang(message)
         if not _is_group(message):
             await message.reply_text(_t('unsupported'))
             return None
@@ -218,6 +253,7 @@ def require_group(func):
 def require_control(func):
     @wraps(func)
     async def wrapper(client, message):
+        await _set_lang(message)
         if not await _allowed(client, message):
             return None
         return await func(client, message)

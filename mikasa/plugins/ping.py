@@ -3,9 +3,10 @@ from pyrogram.handlers import MessageHandler
 
 from ..context import ctx
 from ..tools.utils import format_uptime
-from .common import _fail, _t
+from .common import _fail, _set_lang, _t
 
 async def ping_cmd(client, message) -> None:
+    await _set_lang(message)
     import time
 
     import psutil
