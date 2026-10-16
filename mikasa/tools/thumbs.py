@@ -1,5 +1,7 @@
 import asyncio
+import os
 import re
+import tempfile
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
 
@@ -49,12 +51,10 @@ async def _default_fetcher(url: str) -> bytes:
 class Thumbnail:
     def __init__(
         self,
-        cache_dir='cache',
         fetcher: Optional[Fetcher] = None,
         bold_font: Any = None,
         regular_font: Any = None,
     ) -> None:
-        self._cache = Path(cache_dir)
         self._fetcher = fetcher or _default_fetcher
         self._bold = bold_font or _load_font(BOLD_FONTS, 34)
         self._regular = regular_font or _load_font(REGULAR_FONTS, 28)
@@ -64,26 +64,26 @@ class Thumbnail:
         thumb_url = getattr(track, 'thumbnail', '') or ''
         if not video_id or not thumb_url or not _VIDEO_ID_RE.match(video_id):
             return None
-        self._cache.mkdir(parents=True, exist_ok=True)
-        output = self._cache / f'{video_id}.png'
-        if output.exists() and output.stat().st_size > 0:
-            return str(output)
-        temp = self._cache / f'temp_{video_id}.jpg'
+        raw_fd, raw_name = tempfile.mkstemp(suffix='.jpg')
+        os.close(raw_fd)
+        out_fd, out_name = tempfile.mkstemp(suffix='.png')
+        os.close(out_fd)
+        source, output = Path(raw_name), Path(out_name)
         try:
             data = await self._fetcher(thumb_url)
-            temp.write_bytes(data)
+            source.write_bytes(data)
             title = str(getattr(track, 'title', '') or video_id)
-            await asyncio.to_thread(self._render, temp, output, title, channel, duration)
+            await asyncio.to_thread(self._render, source, output, title, channel, duration)
         except Exception as exc:
             logger.warning('thumbnail failed: %s', type(exc).__name__)
-            for path in (temp, output):
+            for path in (source, output):
                 try:
                     path.unlink()
                 except OSError:
                     pass
             return None
         try:
-            temp.unlink()
+            source.unlink()
         except OSError:
             pass
         return str(output)

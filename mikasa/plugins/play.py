@@ -24,6 +24,7 @@ from .common import (
     _control_labels,
     _deny_blocked,
     _describe,
+    _drop_card,
     _fail,
     _is_group,
     _queue_buttons,
@@ -177,6 +178,7 @@ async def _announce_now_playing(sent, message, item, duration: str, user: str) -
                     reply_markup=markup,
                 )
                 item.message_id = getattr(sent, 'id', 0) or 0
+                _drop_card(card)
                 return
             except Exception as exc:
                 logger.warning('card edit failed: %s', type(exc).__name__)
@@ -185,6 +187,7 @@ async def _announce_now_playing(sent, message, item, duration: str, user: str) -
                 photo=photo, caption=caption, reply_markup=markup
             )
             item.message_id = getattr(sent_msg, 'id', 0) or 0
+            _drop_card(card)
             return
         except Exception as exc:
             logger.warning('photo announce failed: %s', type(exc).__name__)
@@ -194,11 +197,13 @@ async def _announce_now_playing(sent, message, item, duration: str, user: str) -
         try:
             await edit(text, reply_markup=markup)
             item.message_id = getattr(sent, 'id', 0) or 0
+            _drop_card(card)
             return
         except Exception as exc:
             logger.warning('announce edit failed: %s', type(exc).__name__)
     sent_msg = await message.reply_text(text, reply_markup=markup)
     item.message_id = getattr(sent_msg, 'id', 0) or 0
+    _drop_card(card)
 
 
 async def _maybe_play_log(message, item) -> None:

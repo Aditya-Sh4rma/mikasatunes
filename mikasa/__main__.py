@@ -10,7 +10,6 @@ from config import Config
 from . import __version__
 from .context import ctx
 from .core.bot import MusicBot
-from .core.cache import prune_cache
 from .core.calls import Player, PyTgCallsBackend
 from .core.dir import ensure_dirs
 from .core.watch import start_timer, start_watchers, stop_watchers
@@ -48,9 +47,6 @@ async def run() -> int:
     except RuntimeError as exc:
         log.error("startup failed: %s", exc)
         return 2
-    report = prune_cache()
-    if report["removed"]:
-        log.info("pruned %d stale thumbnails", report["removed"])
     database = MongoDB(settings.mongo_url)
     language = Language()
     bot = MusicBot(settings)
@@ -112,7 +108,7 @@ async def run() -> int:
     ctx.search = youtube
     ctx.downloader = intake
     ctx.controller = player
-    ctx.thumbs = Thumbnail(cache_dir='cache')
+    ctx.thumbs = Thumbnail()
 
     loaded = load_plugins(bot)
     log.info("plugins loaded: %s", ",".join(loaded))

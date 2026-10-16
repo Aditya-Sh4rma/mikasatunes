@@ -10,6 +10,7 @@ from ..tools.models import Track
 from .common import (
     _control_labels,
     _current_lang,
+    _drop_card,
     _duration_text,
     _t,
     require_control,
@@ -64,6 +65,8 @@ async def _announce_in_lang(bot, chat_id: int, item) -> None:
             item.message_id = getattr(sent, 'id', 0) or 0
     except Exception as exc:
         logger.warning('autoplay announce failed for %s: %s', chat_id, type(exc).__name__)
+    finally:
+        _drop_card(card)
 
 
 @require_group

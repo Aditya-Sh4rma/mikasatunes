@@ -1,6 +1,7 @@
 from contextvars import ContextVar
 from functools import wraps
 from html import escape as html_escape
+from pathlib import Path
 
 from pyrogram import enums
 
@@ -149,6 +150,15 @@ def _support_chat() -> str:
     settings = ctx.settings
     url = getattr(settings, 'support_chat', '') if settings is not None else ''
     return url or 'https://t.me/'
+
+
+def _drop_card(path) -> None:
+    if not path:
+        return
+    try:
+        Path(path).unlink()
+    except OSError:
+        pass
 
 
 async def _fail(sent, message, key: str, markup=None, **kwargs) -> None:

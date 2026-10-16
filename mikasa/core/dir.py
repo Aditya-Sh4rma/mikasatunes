@@ -7,7 +7,7 @@ logger = get_logger("mikasa.core.dir")
 
 
 def ensure_dirs(*names: str) -> list:
-    targets = list(names) or ["cache", "downloads"]
+    targets = list(names) or ["downloads"]
     if not shutil.which("ffmpeg"):
         raise RuntimeError("ffmpeg must be installed and accessible in the system PATH.")
     if not shutil.which("deno"):
