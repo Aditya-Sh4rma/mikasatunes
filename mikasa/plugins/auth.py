@@ -1,3 +1,8 @@
+# Copyright (c) 2026 Aditya-Sh4rma
+# Licensed under the MIT License.
+# This file is part of MikasaMusic
+
+
 import time
 from html import escape as html_escape
 

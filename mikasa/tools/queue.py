@@ -1,3 +1,8 @@
+# Copyright (c) 2026 Aditya-Sh4rma
+# Licensed under the MIT License.
+# This file is part of MikasaMusic
+
+
 import asyncio
 from dataclasses import dataclass, field
 from enum import Enum, auto

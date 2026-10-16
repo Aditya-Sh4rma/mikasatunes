@@ -10,11 +10,17 @@ You add the bot to a group, start a voice chat, and use `/play` or `/search`. Th
 
 ## Features
 
-- Play by song name, YouTube link, direct audio/video URL, or by replying to a file
+- Play by song name, YouTube link / playlist, direct audio/video URL, or by replying to a file
+- YouTube playlists auto-expand (first song plays, rest queue up)
 - `/search` with tap-to-play buttons
-- Queue, skip, pause, resume, stop, seek, loop
+- Queue, skip, pause, resume, stop, seek/seekback, loop, force-play (`-f`, `/playforce`), video mode (`/vplay`, `-v`)
+- Autoplay: keeps playing related songs when the queue ends, with same-song protection
+- Live progress bar on the player card, updated every few seconds
+- Per-group language with `/lang` (English + Burmese so far)
 - Inline control buttons under the now-playing card
-- Auth users, blacklist, sudo users, broadcast, stats, thumbnails
+- Sticky multi-assistant pool (up to 5 assistants, each group sticks to its own)
+- Persistent download cache, thumbnail cards
+- Auth users, blacklist, sudo users, broadcast, stats
 
 ## Requirements
 
@@ -30,8 +36,8 @@ You add the bot to a group, start a voice chat, and use `/play` or `/search`. Th
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/Aditya-Sh4rma/mikasamusic.git
-cd mikasamusic
+git clone https://github.com/Aditya-Sh4rma/mikasatunes.git
+cd mikasatunes
 
 # 2. System packages (Debian/Ubuntu) — ffmpeg is a must, deno is needed
 #    for the YouTube fallback, so install both together
@@ -69,8 +75,8 @@ venv/bin/python -m mikasa
 Or with Docker:
 
 ```bash
-docker build -t mikasamusic .
-docker run -d --env-file .env mikasamusic
+docker build -t mikasatunes .
+docker run -d --env-file .env mikasatunes
 ```
 
 ## Using it in a group
@@ -85,6 +91,7 @@ docker run -d --env-file .env mikasamusic
 |---|---|
 | `/play <song/url>` (reply works too) | Play a song, or add to queue |
 | `/vplay` | Same, but as video |
+| `/playforce`, `/vplayforce` (or `-f` flag) | Stop current and play right now |
 | `/search <song>` | Show 5 tap-to-play results |
 | `/queue`, `/playing` | Show what's playing and queued |
 | `/pause`, `/resume` | Pause / resume |
@@ -92,13 +99,15 @@ docker run -d --env-file .env mikasamusic
 | `/stop`, `/end` | Stop and leave the voice chat |
 | `/seek <sec>`, `/seekback <sec>` | Jump forward/back (min 10s) |
 | `/loop <count\|off>` | Replay the current song |
-| `/ping` | Latency, uptime, CPU/RAM/disk |
+| `/autoplay <on\|off>` | Keep playing related songs when the queue ends |
+| `/lang`, `/language` | Group language (English, Burmese) |
+| `/ping`, `/alive` | Latency, uptime, CPU/RAM/disk |
 | `/stats` | Bot stats (extra system info for owner) |
 | `/ac`, `/activevc` | Active streams (owner) |
 | `/auth`, `/unauth`, `/authlist` | Let non-admins control playback (admins) |
-| `/reload` | Refresh the admin list |
-| `/addsudo`, `/delsudo`, `/sudolist` | Sudo users (owner) |
-| `/blacklist`, `/unblacklist` | Block chats/users (owner) |
+| `/reload`, `/admincache` | Refresh the admin list |
+| `/addsudo`, `/delsudo`, `/rmsudo`, `/sudolist`, `/listsudo` | Sudo users (owner) |
+| `/blacklist`, `/unblacklist`, `/whitelist` | Block/unblock chats/users (owner) |
 | `/broadcast` | Broadcast a replied message (owner) |
 | `/eval`, `/logs`, `/logger`, `/restart` | Owner tools |
 
@@ -119,7 +128,8 @@ strings/             # bot reply texts (every language lives here)
 
 - Owner: [@itz_m4rvin](https://t.me/itz_m4rvin)
 - Help and updates: [Samurais Support](https://t.me/SamuraisSupport)
+- Inspired by [AnonXMusic](https://github.com/AnonymousX1025/AnonXMusic) by AnonymousX1025 (MIT) — the assistant pool, auth/trusted-user idea and inline player controls follow its design. All code here is written fresh for this project.
 
 ## License
 
-This project is open source. Feel free to fork it and run your own instance — just don't push your own `.env` file with real tokens anywhere.
+MIT — see [LICENSE](LICENSE). Feel free to fork it and run your own instance — just don't push your own `.env` file with real tokens anywhere.
