@@ -98,8 +98,6 @@ class YouTube:
         api_url: Optional[str] = None,
         api_key: Optional[str] = None,
         api_downloader: Optional[Callable[..., Any]] = None,
-        shruti_url: Optional[str] = None,
-        shruti_key: Optional[str] = None,
         cache_dir: str = 'downloads',
         playlist_factory: Optional[Callable[[str], Any]] = None,
         related_factory: Optional[Callable[[str, int], Any]] = None,
@@ -111,22 +109,13 @@ class YouTube:
         self._cookies_file = cookies_file
         self._api_url = (api_url or '').strip().rstrip('/')
         self._api_key = api_key or ''
-        self._shruti_url = (shruti_url or '').strip().rstrip('/')
-        self._shruti_key = shruti_key or ''
         self._cache_dir = Path(cache_dir)
-        self._dl_locks: dict[str, asyncio.Lock] = {}
         if api_downloader is not None:
             self._api_downloader = api_downloader
+        elif self._api_url:
+            self._api_downloader = functools.partial(api_download, self._api_url, self._api_key)
         else:
-            apis = []
-            if self._api_url:
-                apis.append((self._api_url, self._api_key))
-            if self._shruti_url:
-                apis.append((self._shruti_url, self._shruti_key))
-            if apis:
-                self._api_downloader = functools.partial(chained_api_download, apis)
-            else:
-                self._api_downloader = None
+            self._api_downloader = None
 
     async def search(self, query: str, limit: int = 5) -> list[Track]:
         query = (query or '').strip()
@@ -216,16 +205,9 @@ class YouTube:
         directory = Path(directory)
         directory.mkdir(parents=True, exist_ok=True)
         if self._api_downloader is not None and track.video_id:
-            lock = self._dl_locks.setdefault(track.video_id, asyncio.Lock())
-            try:
-                async with lock:
-                    if self._usable(cached):
-                        return cached
-                    api_path = await self._try_api(track, audio_only, cached)
-                    if api_path is not None:
-                        return api_path
-            finally:
-                self._dl_locks.pop(track.video_id, None)
+            api_path = await self._try_api(track, audio_only, cached)
+            if api_path is not None:
+                return api_path
         url = track.url or f'https://www.youtube.com/watch?v={track.video_id}'
         output_template = str(directory / (safe_stem(track.title, track.video_id) + '.%(ext)s'))
         if self._downloader is not None:
@@ -378,7 +360,7 @@ def _remove_partial(path: Path) -> None:
         pass
 
 
-async def devil_api_download(
+async def api_download(
     api_url: str,
     api_key: str,
     video_id: str,
@@ -403,43 +385,22 @@ async def devil_api_download(
         async with session_factory() as session:
             async with session.get(url, params=params, timeout=timeout) as resp:
                 if resp.status != 200:
-                    logger.warning('devil api failed: HTTP %s', resp.status)
+                    logger.warning('api failed: HTTP %s', resp.status)
                     return None
                 headers = getattr(resp, 'headers', None) or {}
                 content_type = headers.get('Content-Type', '') if hasattr(headers, 'get') else ''
                 if content_type.startswith('application/json'):
-                    logger.warning('devil api returned non-media response')
+                    logger.warning('api returned non-media response')
                     return None
                 with open(destination, 'wb') as handle:
                     async for chunk in resp.content.iter_chunked(131072):
                         if chunk:
                             handle.write(chunk)
     except Exception as exc:
-        logger.warning('devil api failed: %s', type(exc).__name__)
+        logger.warning('api failed: %s', type(exc).__name__)
         _remove_partial(destination)
         return None
     if destination.exists() and destination.stat().st_size > 0:
         return destination
     _remove_partial(destination)
-    return None
-
-
-async def chained_api_download(
-    apis,
-    video_id: str,
-    media_type: str,
-    destination,
-    session_factory: Optional[Callable[[], Any]] = None,
-) -> Optional[Path]:
-    for api_url, api_key in apis:
-        result = await devil_api_download(
-            api_url,
-            api_key,
-            video_id,
-            media_type,
-            destination,
-            session_factory=session_factory,
-        )
-        if result is not None:
-            return result
     return None

@@ -62,10 +62,8 @@ async def run() -> int:
 
     youtube = YouTube(
         cookies_file=settings.cookies_file,
-        api_url=settings.devil_api_url,
-        api_key=settings.devil_api_key,
-        shruti_url=settings.shruti_api_url,
-        shruti_key=settings.shruti_api_key,
+        api_url=settings.mikasa_api_url,
+        api_key=settings.mikasa_api_key,
     )
     intake = Telegram()
     queue = Queue(limit=settings.queue_limit)

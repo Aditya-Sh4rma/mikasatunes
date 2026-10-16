@@ -60,12 +60,8 @@ class Config:
         self.thumbnails = _flag("THUMB_GEN", True)
         self.video_enabled = _flag("VIDEO_PLAY", True)
         self.cookies_file = getenv("COOKIES_FILE") or None
-        self.devil_api_url = (getenv("DEVIL_API_URL") or "").strip().rstrip("/")
-        self.devil_api_key = getenv("DEVIL_API_KEY") or ""
-        self.shruti_api_url = (
-            getenv("SHRUTI_API_URL") or "https://api.shrutibots.site"
-        ).strip().rstrip("/")
-        self.shruti_api_key = getenv("SHRUTI_API_KEY") or ""
+        self.mikasa_api_url = (getenv("MIKASA_API_URL") or "").strip().rstrip("/")
+        self.mikasa_api_key = getenv("MIKASA_API_KEY") or ""
         self.default_thumb = getenv("DEFAULT_THUMB", "")
         self.ping_image = getenv("PING_IMG", "")
         self.start_image = getenv("START_IMG", "")
