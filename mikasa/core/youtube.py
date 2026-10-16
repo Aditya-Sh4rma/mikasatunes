@@ -12,8 +12,6 @@ from ..tools.utils import parse_duration, safe_stem
 
 logger = get_logger('mikasa.core.youtube')
 
-DOWNLOAD_DIR = 'downloads'
-
 
 def parse_video_id(value: Optional[str]) -> Optional[str]:
     if not value:
@@ -102,7 +100,7 @@ class YouTube:
         api_downloader: Optional[Callable[..., Any]] = None,
         shruti_url: Optional[str] = None,
         shruti_key: Optional[str] = None,
-        cache_dir: str = DOWNLOAD_DIR,
+        cache_dir: str = 'downloads',
         playlist_factory: Optional[Callable[[str], Any]] = None,
         related_factory: Optional[Callable[[str, int], Any]] = None,
     ) -> None:

@@ -7,8 +7,6 @@ from mikasa.exceptions import ConfigurationError
 
 load_dotenv()
 
-MAX_ASSISTANTS = 5
-
 
 def _flag(name: str, default: bool = False) -> bool:
     return getenv(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
@@ -75,7 +73,7 @@ class Config:
 
     def _load_sessions(self) -> list[SessionSlot]:
         slots = []
-        for index in range(1, MAX_ASSISTANTS + 1):
+        for index in range(1, 6):
             value = _session_value(index)
             if value:
                 slots.append(SessionSlot(index, value))

@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 
-DEFAULT_LANGUAGE = "en"
 LOCALES_DIR = Path(__file__).resolve().parent.parent.parent / "strings"
 
 LANG_NAMES = {
@@ -11,7 +10,7 @@ LANG_NAMES = {
 
 
 class Language:
-    def __init__(self, locales_dir: Path = None, default: str = DEFAULT_LANGUAGE) -> None:
+    def __init__(self, locales_dir: Path = None, default: str = "en") -> None:
         self._dir = Path(locales_dir) if locales_dir else LOCALES_DIR
         self._default = default
         self._cache: dict[str, dict] = {}

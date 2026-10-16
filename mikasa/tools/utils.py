@@ -42,9 +42,6 @@ def progress_bar(current: int, total: int, width: int = 12) -> str:
     return "#" * filled + "-" * (width - filled)
 
 
-PROGRESS_WIDTH = 10
-
-
 def progress_text(played_seconds: int, total_seconds: int) -> str:
     try:
         total = int(total_seconds)
@@ -56,8 +53,8 @@ def progress_text(played_seconds: int, total_seconds: int) -> str:
         played = max(0, int(played_seconds))
     except (TypeError, ValueError):
         played = 0
-    pos = min(int((min(played, total) / total) * PROGRESS_WIDTH), PROGRESS_WIDTH - 1)
-    bar = "—" * pos + "◉" + "—" * (PROGRESS_WIDTH - pos - 1)
+    pos = min(int((min(played, total) / total) * 10), 9)
+    bar = "—" * pos + "◉" + "—" * (10 - pos - 1)
     return f"{format_duration(played)} {bar} {format_duration(total)}"
 
 

@@ -13,8 +13,7 @@ from .core.bot import MusicBot
 from .core.cache import prune_cache
 from .core.calls import Player, PyTgCallsBackend
 from .core.dir import ensure_dirs
-from .core.timer import start_timer
-from .core.watch import start_watchers, stop_watchers
+from .core.watch import start_timer, start_watchers, stop_watchers
 from .core.lang import Language
 from .core.db import MongoDB
 from .core.telegram import Telegram

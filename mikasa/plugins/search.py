@@ -19,16 +19,12 @@ from .common import (
 )
 from .play import _play_item
 
-SEARCH_LIMIT = 5
-BUTTON_WIDTH = 35
-MAX_PENDING_CHATS = 50
-
 _pending: dict[int, dict[str, object]] = {}
 
 _VIDEO_ID_RE = re.compile(r'^[A-Za-z0-9_-]{1,20}$')
 
 
-def _short_title(title: str, width: int = BUTTON_WIDTH) -> str:
+def _short_title(title: str, width: int = 35) -> str:
     title = ' '.join((title or '').split())
     if not title:
         return 'Unknown'
@@ -38,7 +34,7 @@ def _short_title(title: str, width: int = BUTTON_WIDTH) -> str:
 
 
 def remember_search(chat_id: int, tracks) -> None:
-    if len(_pending) >= MAX_PENDING_CHATS and chat_id not in _pending:
+    if len(_pending) >= 50 and chat_id not in _pending:
         _pending.pop(next(iter(_pending)))
     _pending[chat_id] = {track.video_id: track for track in tracks if track.video_id}
 
@@ -56,7 +52,7 @@ async def search_cmd(client, message) -> None:
         return
     sent = await message.reply_text(_t('play_searching'))
     try:
-        tracks = await ctx.search.search(text, limit=SEARCH_LIMIT)
+        tracks = await ctx.search.search(text, limit=5)
     except Exception as exc:
         await _send_resolve_error(sent, message, exc)
         return
