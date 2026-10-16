@@ -258,6 +258,27 @@ class Player:
                 return ping
         return None
 
+    async def participants(self, chat_id: int) -> Optional[int]:
+        backend = self._current_backend(chat_id)
+        if backend is None:
+            return None
+        call = getattr(backend, 'call', None)
+        if call is None:
+            return None
+        get_participants = getattr(call, 'get_participants', None)
+        if get_participants is None:
+            return None
+        try:
+            people = await get_participants(chat_id)
+        except Exception:
+            return None
+        if people is None:
+            return None
+        try:
+            return len(people)
+        except TypeError:
+            return None
+
     async def _stored_slot(self, chat_id: int) -> Optional[int]:
         database = self._database
         if database is None:
@@ -521,7 +542,14 @@ class Player:
         if not path.exists():
             raise DownloadError('resolver produced no file')
         item.file_path = str(path)
-        self._owned.setdefault(chat_id, set()).add(str(path))
+        try:
+            inside_chat_dir = path.resolve().relative_to(
+                (self._temp_root / str(chat_id)).resolve()
+            )
+        except (ValueError, OSError):
+            inside_chat_dir = None
+        if inside_chat_dir is not None:
+            self._owned.setdefault(chat_id, set()).add(str(path))
         return path
 
     async def _cleanup_current(self, chat_id: int) -> None:

@@ -23,7 +23,9 @@ from .utils import (
     format_eta,
     format_size,
     format_uptime,
+    parse_duration,
     progress_bar,
+    safe_stem,
 )
 
 __all__ = [
@@ -46,10 +48,12 @@ __all__ = [
     "is_owner",
     "member_is_admin",
     "parse_callback",
+    "parse_duration",
     "player_controls",
     "progress_bar",
     "queue_actions",
     "reload_admins",
+    "safe_stem",
     "search_results",
     "select_data",
     "start_key",

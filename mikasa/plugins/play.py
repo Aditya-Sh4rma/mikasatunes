@@ -15,7 +15,7 @@ from ..tools.buttons import player_controls
 from ..tools.queue import AddResult
 from ..tools.users import _display_user
 from ..core.telegram import extension_of, is_supported_url
-from ..core.youtube import is_youtube, parse_video_id
+from ..core.youtube import is_playlist_url, is_youtube, parse_video_id
 from ..logging_config import get_logger
 from .common import (
     VIDEO_EXTENSIONS,
@@ -166,12 +166,13 @@ async def _announce_now_playing(sent, message, item, duration: str, user: str) -
             card = None
     markup = player_controls(chat_id, paused=False, labels=_control_labels())
     caption = _t('play_media', url=url, title=title, duration=duration, user=user)
-    if card:
+    photo = card or (getattr(settings, 'default_thumb', '') or '')
+    if photo:
         edit_media = getattr(sent, 'edit_media', None)
         if edit_media is not None:
             try:
                 await edit_media(
-                    InputMediaPhoto(media=card, caption=caption),
+                    InputMediaPhoto(media=photo, caption=caption),
                     reply_markup=markup,
                 )
                 item.message_id = getattr(sent, 'id', 0) or 0
@@ -180,7 +181,7 @@ async def _announce_now_playing(sent, message, item, duration: str, user: str) -
                 logger.warning('card edit failed: %s', type(exc).__name__)
         try:
             sent_msg = await message.reply_photo(
-                photo=card, caption=caption, reply_markup=markup
+                photo=photo, caption=caption, reply_markup=markup
             )
             item.message_id = getattr(sent_msg, 'id', 0) or 0
             return
@@ -267,6 +268,9 @@ async def _play_impl(client, message, video: bool = False, force: bool = False) 
         await message.reply_text(_t('play_usage'))
         return
     sent = await message.reply_text(_t('play_searching'))
+    if reply is None and text and is_playlist_url(text):
+        await _play_playlist(client, message, sent, text, chat_id, video)
+        return
     try:
         item = await _resolve_item(text, reply, message)
     except Exception as exc:
@@ -276,6 +280,87 @@ async def _play_impl(client, message, video: bool = False, force: bool = False) 
         item.is_video = True
     item.requested_by = _display_user(message)
     await _play_item(client, message, sent, item, chat_id, force=force)
+
+
+async def _play_playlist(client, message, sent, text: str, chat_id: int, video: bool) -> None:
+    settings = ctx.settings
+    try:
+        playlist_limit = int(getattr(settings, 'playlist_limit', 20) or 20)
+    except (TypeError, ValueError):
+        playlist_limit = 20
+    try:
+        await sent.edit_text(_t('playlist_fetching'))
+    except Exception:
+        pass
+    try:
+        tracks = await ctx.search.playlist(text, limit=playlist_limit)
+    except Exception:
+        tracks = []
+    if not tracks:
+        await _fail(sent, message, 'playlist_error')
+        return
+    user = _display_user(message)
+    controller = ctx.controller
+    added = []
+    full = False
+    for track in tracks:
+        if video and isinstance(track, Track):
+            track.is_video = True
+        track.requested_by = user
+        try:
+            result = await controller.enqueue(chat_id, track)
+        except Exception:
+            continue
+        if result is AddResult.ADDED:
+            controller.own(chat_id, track)
+            added.append(track)
+        elif result is AddResult.FULL:
+            full = True
+            break
+    if not added:
+        if full:
+            queue_limit = getattr(settings, 'queue_limit', 0) if settings is not None else 0
+            await _fail(sent, message, 'play_queue_full', limit=queue_limit)
+        else:
+            await _fail(sent, message, 'duplicate')
+        return
+    first = added[0]
+    rest = len(added) - 1
+    if await controller.current(chat_id) is not None:
+        position = await ctx.queue.size(chat_id)
+        duration, _ = _describe(first)
+        await _fail(
+            sent,
+            message,
+            'play_queued',
+            _queue_buttons(chat_id),
+            position=position - rest,
+            url=first.url or '',
+            title=html_escape(first.title),
+            duration=duration,
+            user=user,
+        )
+        if rest:
+            await message.reply_text(_t('playlist_queued', count=rest))
+        return
+    await _ensure_assistant(chat_id)
+    try:
+        started = await controller.start(chat_id)
+    except NoActiveGroupCall:
+        await _fail(sent, message, 'error_no_call')
+        return
+    current = await controller.current(chat_id)
+    if started or current is not None:
+        playing = current if current is not None else first
+        playing_duration, playing_user = _describe(playing)
+        await _announce_now_playing(sent, message, playing, playing_duration, playing_user)
+        await _maybe_play_log(message, playing)
+        if rest:
+            await message.reply_text(_t('playlist_queued', count=rest))
+    elif getattr(ctx, 'assistants', None) is not None and not ctx.assistants.ready():
+        await _fail(sent, message, 'no_assistant', title=first.title)
+    else:
+        await _fail(sent, message, 'error_no_file', support=_support_chat())
 
 
 async def _play_item(client, message, sent, item, chat_id: int, force: bool = False) -> None:

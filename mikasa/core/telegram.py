@@ -18,8 +18,15 @@ Downloader = Callable[[str, Path], Awaitable[Path]]
 def is_direct_url(url: Optional[str]) -> bool:
     if not url:
         return False
-    parsed = urlparse(url.strip())
+    try:
+        parsed = urlparse(url.strip())
+    except ValueError:
+        return False
     if parsed.scheme not in ('http', 'https'):
+        return False
+    if not parsed.hostname:
+        return False
+    if parsed.username or parsed.password:
         return False
     return not is_youtube(url)
 
@@ -61,10 +68,8 @@ class Telegram:
     def __init__(
         self,
         downloader: Optional[Downloader] = None,
-        max_bytes: Optional[int] = None,
     ) -> None:
         self._downloader = downloader
-        self._max_bytes = max_bytes
 
     async def from_message(self, message: Any, client: Any, directory: Path) -> Media:
         item, is_video = _telegram_media(message)
@@ -75,9 +80,6 @@ class Telegram:
         file_id = getattr(item, 'file_id', None) or getattr(item, 'file_unique_id', '')
         if not file_id:
             raise UnsupportedMedia('media has no file identifier')
-        size = getattr(item, 'file_size', None) or 0
-        if self._max_bytes and size and size > self._max_bytes:
-            raise UnsupportedMedia('file exceeds the configured size limit')
         title = getattr(item, 'title', None) or getattr(item, 'file_name', None) or 'media'
         extension = Path(getattr(item, 'file_name', '') or '').suffix
         if not extension:

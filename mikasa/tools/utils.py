@@ -48,3 +48,34 @@ def format_uptime(seconds: int) -> str:
     if hours:
         return f"{hours}:{minutes:02d}:{secs:02d}"
     return f"{minutes}:{secs:02d}"
+
+
+def parse_duration(value) -> int:
+    if value is None:
+        return 0
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return max(0, int(value))
+    text = str(value).strip()
+    if not text or not text[0].isdigit():
+        return 0
+    parts = text.split(':')
+    if not all(part.isdigit() for part in parts):
+        return 0
+    seconds = 0
+    for part in parts:
+        seconds = seconds * 60 + int(part)
+    return seconds
+
+
+def safe_stem(title: str, video_id: str) -> str:
+    allowed = []
+    for ch in (title or ''):
+        if ch.isalnum() or ch in ' ._-':
+            allowed.append(ch)
+        elif ch.isspace():
+            allowed.append(' ')
+    cleaned = ' '.join(''.join(allowed).split())
+    cleaned = cleaned[:80].strip(' .')
+    if not cleaned:
+        cleaned = video_id
+    return f'{cleaned} [{video_id}]'

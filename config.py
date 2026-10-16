@@ -61,7 +61,6 @@ class Config:
         self.auto_end = _flag("AUTO_END", False)
         self.thumbnails = _flag("THUMB_GEN", True)
         self.video_enabled = _flag("VIDEO_PLAY", True)
-        self.auto_reconnect = _flag("AUTO_RECONNECT", True)
         self.cookies_file = getenv("COOKIES_FILE") or None
         self.devil_api_url = (getenv("DEVIL_API_URL") or "").strip().rstrip("/")
         self.devil_api_key = getenv("DEVIL_API_KEY") or ""
@@ -69,12 +68,9 @@ class Config:
             getenv("SHRUTI_API_URL") or "https://api.shrutibots.site"
         ).strip().rstrip("/")
         self.shruti_api_key = getenv("SHRUTI_API_KEY") or ""
-        self.cache_limit_mb = _int("CACHE_LIMIT_MB", 2048)
         self.default_thumb = getenv("DEFAULT_THUMB", "")
         self.ping_image = getenv("PING_IMG", "")
         self.start_image = getenv("START_IMG", "")
-        self.health_host = getenv("HEALTH_HOST", "0.0.0.0")
-        self.health_port = _int("HEALTH_PORT", 8080)
         self.sessions = self._load_sessions()
 
     def _load_sessions(self) -> list[SessionSlot]:

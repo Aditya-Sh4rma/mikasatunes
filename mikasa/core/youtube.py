@@ -1,18 +1,18 @@
 import asyncio
 import functools
+import inspect
 from pathlib import Path
 from typing import Any, Callable, Optional
 from urllib.parse import parse_qs, urlparse
 
 from ..exceptions import DownloadError
-from ..tools.models import Track
 from ..logging_config import get_logger
+from ..tools.models import Track
+from ..tools.utils import parse_duration, safe_stem
 
 logger = get_logger('mikasa.core.youtube')
 
-
-def _is_video_id(value: str) -> bool:
-    return len(value) == 11 and all(ch.isalnum() or ch in '_-' for ch in value)
+DOWNLOAD_DIR = 'downloads'
 
 
 def parse_video_id(value: Optional[str]) -> Optional[str]:
@@ -30,6 +30,8 @@ def parse_video_id(value: Optional[str]) -> Optional[str]:
         host = host[4:]
     if host.startswith('m.'):
         host = host[2:]
+    if host.startswith('music.'):
+        host = host[6:]
     if host == 'youtu.be':
         vid = parsed.path.lstrip('/').split('/')[0]
         return vid if _is_video_id(vid) else None
@@ -44,39 +46,49 @@ def parse_video_id(value: Optional[str]) -> Optional[str]:
     return None
 
 
+def parse_playlist_id(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    candidate = value.strip()
+    if '://' not in candidate:
+        candidate = 'https://' + candidate
+    try:
+        parsed = urlparse(candidate)
+    except ValueError:
+        return None
+    if parsed.scheme not in ('http', 'https'):
+        return None
+    host = parsed.netloc.lower()
+    if host.startswith('www.'):
+        host = host[4:]
+    if host.startswith('m.'):
+        host = host[2:]
+    if host.startswith('music.'):
+        host = host[6:]
+    if not host.endswith('youtube.com'):
+        return None
+    if parsed.path not in ('/playlist', '/watch'):
+        return None
+    candidates = parse_qs(parsed.query).get('list') or []
+    for raw in candidates:
+        cleaned = (raw or '').strip()
+        if 2 <= len(cleaned) <= 64 and all(
+            ch.isalnum() or ch in '_-' for ch in cleaned
+        ):
+            return cleaned
+    return None
+
+
+def is_playlist_url(value: Optional[str]) -> bool:
+    return parse_playlist_id(value) is not None
+
+
+def _is_video_id(value: str) -> bool:
+    return len(value) == 11 and all(ch.isalnum() or ch in '_-' for ch in value)
+
+
 def is_youtube(value: Optional[str]) -> bool:
     return parse_video_id(value) is not None
-
-
-def parse_duration(value: Any) -> int:
-    if value is None:
-        return 0
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
-        return max(0, int(value))
-    text = str(value).strip()
-    if not text or not text[0].isdigit():
-        return 0
-    parts = text.split(':')
-    if not all(part.isdigit() for part in parts):
-        return 0
-    seconds = 0
-    for part in parts:
-        seconds = seconds * 60 + int(part)
-    return seconds
-
-
-def safe_stem(title: str, video_id: str) -> str:
-    allowed = []
-    for ch in (title or ''):
-        if ch.isalnum() or ch in ' ._-':
-            allowed.append(ch)
-        elif ch.isspace():
-            allowed.append(' ')
-    cleaned = ' '.join(''.join(allowed).split())
-    cleaned = cleaned[:80].strip(' .')
-    if not cleaned:
-        cleaned = video_id
-    return f'{cleaned} [{video_id}]'
 
 
 class YouTube:
@@ -90,14 +102,19 @@ class YouTube:
         api_downloader: Optional[Callable[..., Any]] = None,
         shruti_url: Optional[str] = None,
         shruti_key: Optional[str] = None,
+        cache_dir: str = DOWNLOAD_DIR,
+        playlist_factory: Optional[Callable[[str], Any]] = None,
     ) -> None:
         self._search_factory = search_factory
+        self._playlist_factory = playlist_factory
         self._downloader = downloader
         self._cookies_file = cookies_file
         self._api_url = (api_url or '').strip().rstrip('/')
         self._api_key = api_key or ''
         self._shruti_url = (shruti_url or '').strip().rstrip('/')
         self._shruti_key = shruti_key or ''
+        self._cache_dir = Path(cache_dir)
+        self._dl_locks: dict[str, asyncio.Lock] = {}
         if api_downloader is not None:
             self._api_downloader = api_downloader
         else:
@@ -133,28 +150,69 @@ class YouTube:
                 break
         return tracks
 
+    async def playlist(self, url: str, limit: int = 20) -> list[Track]:
+        url = (url or '').strip()
+        if not url or limit < 1:
+            return []
+        factory = self._playlist_factory or self._default_playlist_factory
+        try:
+            result = factory(url)
+            if inspect.isawaitable(result):
+                result = await result
+        except Exception as exc:
+            raise DownloadError(f'playlist failed: {type(exc).__name__}') from exc
+        videos = result.get('videos', []) if isinstance(result, dict) else []
+        tracks: list[Track] = []
+        for video in videos:
+            track = self._video_to_track(video) if isinstance(video, dict) else None
+            if track is not None:
+                tracks.append(track)
+            if len(tracks) >= limit:
+                break
+        return tracks
+
+    def _cached_path(self, track: Track, audio_only: bool) -> Optional[Path]:
+        if not track.video_id:
+            return None
+        video = not audio_only and bool(getattr(track, 'is_video', False))
+        extension = '.mp4' if video else '.mp3'
+        return self._cache_dir / f'{track.video_id}{extension}'
+
+    @staticmethod
+    def _usable(path: Optional[Path]) -> bool:
+        return bool(path) and path.exists() and path.stat().st_size > 0
+
     async def download(
         self,
         track: Track,
         directory: Path,
         *,
         audio_only: bool = True,
-        limit_bytes: Optional[int] = None,
     ) -> Path:
+        cached = self._cached_path(track, audio_only)
+        if self._usable(cached):
+            return cached
         directory = Path(directory)
         directory.mkdir(parents=True, exist_ok=True)
+        if self._api_downloader is not None and track.video_id:
+            lock = self._dl_locks.setdefault(track.video_id, asyncio.Lock())
+            try:
+                async with lock:
+                    if self._usable(cached):
+                        return cached
+                    api_path = await self._try_api(track, audio_only, cached)
+                    if api_path is not None:
+                        return api_path
+            finally:
+                self._dl_locks.pop(track.video_id, None)
         url = track.url or f'https://www.youtube.com/watch?v={track.video_id}'
         output_template = str(directory / (safe_stem(track.title, track.video_id) + '.%(ext)s'))
-        if self._api_downloader is not None and track.video_id:
-            api_path = await self._try_api(track, directory, audio_only, limit_bytes)
-            if api_path is not None:
-                return api_path
         if self._downloader is not None:
-            downloader = self._downloader
+            call = (self._downloader, url, output_template, audio_only)
         else:
-            downloader = functools.partial(self._default_downloader, cookies_file=self._cookies_file)
+            call = (self._default_downloader, url, output_template, audio_only, self._cookies_file)
         try:
-            path = await asyncio.to_thread(downloader, url, output_template, audio_only, limit_bytes)
+            path = await asyncio.to_thread(*call)
         except DownloadError:
             raise
         except Exception as exc:
@@ -167,15 +225,9 @@ class YouTube:
         return path
 
     async def _try_api(
-        self,
-        track: Track,
-        directory: Path,
-        audio_only: bool,
-        limit_bytes: Optional[int] = None,
+        self, track: Track, audio_only: bool, destination: Path
     ) -> Optional[Path]:
         media_type = 'video' if (not audio_only and bool(getattr(track, 'is_video', False))) else 'audio'
-        extension = '.mp4' if media_type == 'video' else '.mp3'
-        destination = Path(directory) / (safe_stem(track.title, track.video_id) + extension)
         try:
             result = await self._api_downloader(track.video_id, media_type, destination)
         except Exception as exc:
@@ -184,19 +236,11 @@ class YouTube:
         if result is None:
             return None
         result = Path(result)
-        if not result.exists() or not _within(result, Path(directory)):
+        if not result.exists() or not _within(result, self._cache_dir):
             logger.warning('api download produced no file')
             return None
-        size = result.stat().st_size
-        if size <= 0:
+        if result.stat().st_size <= 0:
             logger.warning('api download produced no file')
-            try:
-                result.unlink()
-            except OSError:
-                pass
-            return None
-        if limit_bytes and size > limit_bytes:
-            logger.warning('api download exceeds size limit')
             try:
                 result.unlink()
             except OSError:
@@ -210,7 +254,12 @@ class YouTube:
         return VideosSearch(query, limit=limit)
 
     @staticmethod
-    def _default_downloader(url, output_template, audio_only, limit_bytes, cookies_file=None):
+    def _default_playlist_factory(url: str) -> Any:
+        from py_yt import Playlist
+        return Playlist.get(url)
+
+    @staticmethod
+    def _default_downloader(url, output_template, audio_only, cookies_file=None):
         import yt_dlp
         options = {
             'outtmpl': output_template,
@@ -221,8 +270,6 @@ class YouTube:
         }
         if audio_only:
             options['format'] = 'bestaudio/best'
-        if limit_bytes:
-            options['max_filesize'] = int(limit_bytes)
         if cookies_file:
             options['cookiefile'] = cookies_file
         with yt_dlp.YoutubeDL(options) as ydl:
@@ -232,6 +279,12 @@ class YouTube:
     @staticmethod
     def _to_track(component: Any) -> Optional[Track]:
         if not isinstance(component, dict) or component.get('type') != 'video':
+            return None
+        return YouTube._video_to_track(component)
+
+    @staticmethod
+    def _video_to_track(component: Any) -> Optional[Track]:
+        if not isinstance(component, dict):
             return None
         video_id = component.get('id')
         if not video_id:
@@ -253,10 +306,9 @@ class YouTube:
 
 
 class MediaResolver:
-    def __init__(self, youtube, intake, max_bytes: Optional[int] = None) -> None:
+    def __init__(self, youtube, intake) -> None:
         self._youtube = youtube
         self._intake = intake
-        self._max_bytes = max_bytes
 
     async def __call__(self, chat_id: int, item, directory: Path) -> Path:
         directory = Path(directory)
@@ -266,7 +318,6 @@ class MediaResolver:
                 item,
                 directory,
                 audio_only=not item.is_video,
-                limit_bytes=self._max_bytes,
             )
         existing = getattr(item, 'file_path', None)
         if existing and Path(existing).exists():
@@ -306,7 +357,6 @@ async def devil_api_download(
     destination,
     timeout_sec: Optional[int] = None,
     session_factory: Optional[Callable[[], Any]] = None,
-    limit_bytes: Optional[int] = None,
 ) -> Optional[Path]:
     destination = Path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -331,23 +381,10 @@ async def devil_api_download(
                 if content_type.startswith('application/json'):
                     logger.warning('devil api returned non-media response')
                     return None
-                if limit_bytes:
-                    declared = headers.get('Content-Length', '') if hasattr(headers, 'get') else ''
-                    if declared and str(declared).isdigit() and int(declared) > limit_bytes:
-                        logger.warning('devil api file exceeds size limit')
-                        return None
-                total = 0
                 with open(destination, 'wb') as handle:
                     async for chunk in resp.content.iter_chunked(131072):
-                        if not chunk:
-                            continue
-                        total += len(chunk)
-                        if limit_bytes and total > limit_bytes:
-                            logger.warning('devil api file exceeds size limit')
-                            handle.close()
-                            _remove_partial(destination)
-                            return None
-                        handle.write(chunk)
+                        if chunk:
+                            handle.write(chunk)
     except Exception as exc:
         logger.warning('devil api failed: %s', type(exc).__name__)
         _remove_partial(destination)
@@ -364,7 +401,6 @@ async def chained_api_download(
     media_type: str,
     destination,
     session_factory: Optional[Callable[[], Any]] = None,
-    limit_bytes: Optional[int] = None,
 ) -> Optional[Path]:
     for api_url, api_key in apis:
         result = await devil_api_download(
@@ -374,7 +410,6 @@ async def chained_api_download(
             media_type,
             destination,
             session_factory=session_factory,
-            limit_bytes=limit_bytes,
         )
         if result is not None:
             return result

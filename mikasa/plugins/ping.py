@@ -11,7 +11,17 @@ async def ping_cmd(client, message) -> None:
     import psutil
 
     started = time.time()
-    sent = await message.reply_text(_t('pinging'))
+    photo = getattr(ctx.settings, 'ping_image', '') or ''
+    if photo:
+        try:
+            sent = await message.reply_photo(photo=photo, caption=_t('pinging'))
+            use_photo = True
+        except Exception:
+            sent = await message.reply_text(_t('pinging'))
+            use_photo = False
+    else:
+        sent = await message.reply_text(_t('pinging'))
+        use_photo = False
     latency = round((time.time() - started) * 1000, 2)
     boot = getattr(ctx, 'started_at', None) or time.time()
     uptime = format_uptime(time.time() - boot)
@@ -22,10 +32,7 @@ async def ping_cmd(client, message) -> None:
             voice_ping = controller.voice_ping()
         except Exception:
             voice_ping = None
-    await _fail(
-        sent,
-        message,
-        'ping_pong',
+    args = dict(
         latency=latency,
         uptime=uptime,
         cpu=psutil.cpu_percent(interval=0),
@@ -33,6 +40,15 @@ async def ping_cmd(client, message) -> None:
         disk=psutil.disk_usage('/').percent,
         calls=round(voice_ping, 2) if voice_ping is not None else 'N/A',
     )
+    if use_photo:
+        edit_caption = getattr(sent, 'edit_caption', None)
+        if edit_caption is not None:
+            try:
+                await edit_caption(_t('ping_pong', **args))
+                return
+            except Exception:
+                pass
+    await _fail(sent, message, 'ping_pong', **args)
 
 
 HANDLERS = (

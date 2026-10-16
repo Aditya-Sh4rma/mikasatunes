@@ -13,6 +13,7 @@ from .core.bot import MusicBot
 from .core.cache import prune_cache
 from .core.calls import Player, PyTgCallsBackend
 from .core.dir import ensure_dirs
+from .core.watch import start_watchers, stop_watchers
 from .core.lang import Language
 from .core.mongo import MongoDB
 from .core.telegram import Telegram
@@ -66,9 +67,9 @@ async def run() -> int:
         shruti_url=settings.shruti_api_url,
         shruti_key=settings.shruti_api_key,
     )
-    intake = Telegram(max_bytes=settings.cache_limit_mb * 1024 * 1024)
+    intake = Telegram()
     queue = Queue(limit=settings.queue_limit)
-    resolver = MediaResolver(youtube, intake, max_bytes=settings.cache_limit_mb * 1024 * 1024)
+    resolver = MediaResolver(youtube, intake)
     backends = {}
 
     async def on_stream_end(chat_id: int) -> None:
@@ -129,9 +130,20 @@ async def run() -> int:
         return 2
     log.info("MikasaMusic %s online", __version__)
     log.info("assistants: %s", [state.label for state in assistants.ready()])
+
+    async def _auto_left_notify(chat_id: int) -> None:
+        from .plugins.common import _t
+
+        try:
+            await bot.send_message(chat_id, _t('auto_left'))
+        except Exception:
+            pass
+
+    watchers = start_watchers(settings, assistants, player, _auto_left_notify)
     try:
         await idle()
     finally:
+        stop_watchers(watchers)
         await _shutdown(log, [
             ("player", player.close()),
             ("assistants", assistants.stop()),
