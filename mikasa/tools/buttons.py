@@ -261,6 +261,49 @@ def lang_markup(
     return InlineKeyboardMarkup(rows)
 
 
+def settings_data(action: str) -> str:
+    return f'{PREFIX}:settings:{action}'
+
+
+def settings_markup(
+    play_mode: bool = False,
+    lang_name: str = '',
+    labels: Optional[dict] = None,
+) -> InlineKeyboardMarkup:
+    labels = labels or {}
+
+    def text(key: str, default: str) -> str:
+        return labels.get(key) or default
+
+    mode = text('play_mode_admins', 'Admins Only') if play_mode else text('play_mode_everyone', 'Everyone')
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                text('play_mode', 'Play Mode'),
+                callback_data=settings_data('noop'),
+                style=enums.ButtonStyle.DEFAULT,
+            ),
+            InlineKeyboardButton(
+                mode,
+                callback_data=settings_data('play'),
+                style=enums.ButtonStyle.PRIMARY,
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                text('language', 'Language'),
+                callback_data=settings_data('noop'),
+                style=enums.ButtonStyle.DEFAULT,
+            ),
+            InlineKeyboardButton(
+                lang_name or 'English',
+                callback_data=settings_data('lang'),
+                style=enums.ButtonStyle.PRIMARY,
+            ),
+        ],
+    ])
+
+
 def search_results(
     chat_id: int,
     entries,

@@ -51,6 +51,7 @@ MediaItem = Union[Track, Media]
 class ChatSettings:
     language: str = "en"
     assistant: int = 0
+    play_mode: bool = False
 
     def to_document(self) -> dict:
         return asdict(self)
@@ -60,4 +61,5 @@ class ChatSettings:
         return cls(
             language=str(document.get("language", "en")),
             assistant=int(document.get("assistant", 0)),
+            play_mode=bool(document.get("play_mode", False)),
         )

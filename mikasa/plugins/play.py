@@ -12,6 +12,7 @@ from ..context import ctx
 from ..exceptions import DownloadError
 from ..tools.models import Media, Track
 from ..tools.buttons import player_controls
+from ..tools.perms import _allowed_user, chat_play_mode
 from ..tools.queue import AddResult
 from ..tools.users import _display_user
 from ..core.telegram import extension_of, is_supported_url
@@ -275,6 +276,14 @@ async def _play_impl(client, message, video: bool = False, force: bool = False) 
     if not text and reply is None:
         await message.reply_text(_t('play_usage'))
         return
+    if await chat_play_mode(chat_id):
+        user = getattr(message, 'from_user', None)
+        allowed = False
+        if user is not None:
+            allowed, _ = await _allowed_user(client, chat_id, user.id)
+        if not allowed:
+            await message.reply_text(_t('play_admin'))
+            return
     sent = await message.reply_text(_t('play_searching'))
     if reply is None and text and is_playlist_url(text):
         await _play_playlist(client, message, sent, text, chat_id, video)

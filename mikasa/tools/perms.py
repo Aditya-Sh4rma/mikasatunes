@@ -28,3 +28,14 @@ async def _allowed_user(client, chat_id: int, user_id: int, allow_auth: bool = T
         except Exception:
             pass
     return False, 'not_admin'
+
+
+async def chat_play_mode(chat_id: int) -> bool:
+    database = getattr(ctx, 'database', None)
+    if database is None:
+        return False
+    try:
+        settings = await database.chat_settings(chat_id)
+    except Exception:
+        return False
+    return bool(getattr(settings, 'play_mode', False))
