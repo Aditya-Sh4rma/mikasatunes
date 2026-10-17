@@ -33,7 +33,7 @@ async def active_cmd(client, message) -> None:
             current = None
         if current is not None:
             title = html_escape(getattr(current, 'title', '') or '')[:25]
-        lines.append(f'\n{index}. <code>{chat_id}</code>\n    ➜ {title}')
+        lines.append(f'\n<b>{index}.</b> {title}\n     <code>{chat_id}</code>')
     await message.reply_text(''.join(lines))
 
 
