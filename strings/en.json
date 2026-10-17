@@ -27,7 +27,7 @@
   "btn_skip": "Skip",
   "btn_stop": "Stop",
   "btn_close": "Close",
-  "queue_curr": "<u><b>Now playing:</b></u>\n\n<a href={url}>{title}</a>\n{duration} | requested by {user}\n\n",
+  "queue_curr": "<u><b>Now playing:</b></u>\n\n<a href={url}>{title}</a>\n{duration} | requested by {user}\n",
   "queue_item": "{index}. {title} ({duration})\n",
   "queue_empty": "Nothing is waiting in the queue right now.",
   "remove_usage": "<b>Usage:</b>\n\n<code>/remove [position]</code>\n<b>Example:</b> <code>/remove 3</code>",

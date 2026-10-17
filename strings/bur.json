@@ -27,7 +27,7 @@
   "btn_skip": "ကျော်",
   "btn_stop": "ရပ်",
   "btn_close": "ပိတ်",
-  "queue_curr": "<u><b>အခု ဖွင့်နေတာ:</b></u>\n\n<a href={url}>{title}</a>\n{duration} | တောင်းဆိုသူ {user}\n\n",
+  "queue_curr": "<u><b>အခု ဖွင့်နေတာ:</b></u>\n\n<a href={url}>{title}</a>\n{duration} | တောင်းဆိုသူ {user}\n",
   "queue_item": "{index}. {title} ({duration})\n",
   "queue_empty": "တန်းစီစာရင်းထဲမှာ အခု ဘာမှ မရှိသေးပါဘူး။",
   "remove_usage": "<b>အသုံးပြုနည်း:</b>\n\n<code>/remove [နေရာ]</code>\n<b>ဥပမာ:</b> <code>/remove 3</code>",

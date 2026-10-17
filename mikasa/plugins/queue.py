@@ -30,7 +30,7 @@ async def queue_cmd(client, message) -> None:
             lines.append(
                 _t(
                     'queue_item',
-                    index=index + 1,
+                    index=index,
                     title=html_escape(item.title),
                     duration=item_duration,
                 )
