@@ -8,10 +8,15 @@ from .common import _queue_buttons, _t, require_control, require_group
 @require_group
 @require_control
 async def stop(client, message) -> None:
-    await ctx.controller.stop(message.chat.id)
+    controller = ctx.controller
+    chat_id = message.chat.id
+    if await controller.current(chat_id) is None:
+        await message.reply_text(_t('not_playing'))
+        return
+    await controller.stop(chat_id)
     await message.reply_text(
         _t('play_stopped', user=_display_user(message)),
-        reply_markup=_queue_buttons(message.chat.id),
+        reply_markup=_queue_buttons(chat_id),
     )
 
 

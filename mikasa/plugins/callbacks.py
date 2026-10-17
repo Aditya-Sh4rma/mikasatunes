@@ -125,6 +125,9 @@ async def control_cb(client, query) -> None:
             except Exception:
                 pass
     elif action == 'stop':
+        if await controller.current(chat_id) is None:
+            await query.answer(_t('not_playing'), show_alert=True)
+            return
         await controller.stop(chat_id)
         await query.answer()
         if message is not None:
