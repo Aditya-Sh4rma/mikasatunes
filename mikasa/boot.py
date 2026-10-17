@@ -6,7 +6,7 @@ from config import Config
 from . import __version__
 from .context import ctx
 from .core.bot import MusicBot
-from .core.calls import Player, PyTgCallsBackend
+from .core.calls import Player, make_backend_factory
 from .core.db import MongoDB
 from .core.dir import ensure_dirs
 from .core.lang import Language
@@ -14,9 +14,9 @@ from .core.telegram import Telegram
 from .core.userbot import AssistantPool
 from .core.watch import start_timer, start_watchers, stop_watchers
 from .core.youtube import MediaResolver, YouTube
-from .exceptions import MikasaError
 from .logging_config import get_logger
 from .plugins import load_plugins
+from .plugins.autoplay import on_track_start
 from .tools.queue import Queue
 from .tools.thumbs import Thumbnail
 
@@ -27,48 +27,6 @@ async def _shutdown(log, steps) -> None:
             await coro
         except Exception as exc:
             log.warning("shutdown: %s failed: %s", name, type(exc).__name__)
-
-
-async def on_stream_end(chat_id: int) -> None:
-    controller = ctx.controller
-    if controller is not None:
-        await controller.advance(chat_id)
-
-
-async def on_track_start(chat_id: int, item) -> None:
-    if getattr(item, 'requested_by', '') != 'autoplay':
-        return
-    from .plugins.autoplay import announce_autoplay
-
-    log = get_logger("mikasa")
-    try:
-        await announce_autoplay(chat_id, item)
-    except Exception as exc:
-        log.warning('autoplay announce failed for %s: %s', chat_id, type(exc).__name__)
-
-
-def backend_factory(backends: dict, video_enabled: bool, state):
-    backend = backends.get(state.slot)
-    if backend is None:
-        backend = PyTgCallsBackend(
-            state,
-            on_stream_end=on_stream_end,
-            video_enabled=video_enabled,
-        )
-        backends[state.slot] = backend
-    return backend
-
-
-async def _auto_left_notify(chat_id: int) -> None:
-    from .plugins.common import _tc
-
-    bot = getattr(ctx, 'bot', None)
-    if bot is None:
-        return
-    try:
-        await bot.send_message(chat_id, _tc(chat_id, 'auto_left'))
-    except Exception:
-        pass
 
 
 async def boot() -> dict:
@@ -94,10 +52,7 @@ async def boot() -> dict:
     intake = Telegram()
     queue = Queue(limit=settings.queue_limit)
     resolver = MediaResolver(youtube, intake)
-    backends = {}
-
-    def factory(state):
-        return backend_factory(backends, settings.video_enabled, state)
+    factory = make_backend_factory(settings.video_enabled)
 
     player = Player(
         assistants,
@@ -145,7 +100,7 @@ async def boot() -> dict:
     log.info("MikasaMusic %s online", __version__)
     log.info("assistants: %s", [state.label for state in assistants.ready()])
 
-    watchers = start_watchers(settings, assistants, player, _auto_left_notify)
+    watchers = start_watchers(settings, assistants, player)
     watchers.append(start_timer(bot, player, language, settings.default_language or "en"))
     return {
         "settings": settings,

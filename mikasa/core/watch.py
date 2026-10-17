@@ -94,8 +94,22 @@ async def auto_end_loop(controller, notify: Optional[Notify] = None, interval: i
         await auto_end_tick(controller, notify)
 
 
+async def auto_left_notify(chat_id: int) -> None:
+    from ..context import ctx
+    from ..plugins.common import _tc
+
+    bot = getattr(ctx, 'bot', None)
+    if bot is None:
+        return
+    try:
+        await bot.send_message(chat_id, _tc(chat_id, 'auto_left'))
+    except Exception:
+        pass
+
+
 def start_watchers(settings, assistants, player, notify: Optional[Notify] = None) -> list:
     tasks = []
+    notify = notify or auto_left_notify
     if getattr(settings, 'auto_leave', False):
         skip = {getattr(settings, 'log_chat_id', 0)}
         tasks.append(asyncio.create_task(

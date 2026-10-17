@@ -193,6 +193,31 @@ class PyTgCallsBackend(PlaybackBackend):
                     logger.warning('leave error %s: %s', chat_id, type(exc).__name__)
 
 
+async def on_stream_end(chat_id: int) -> None:
+    from ..context import ctx
+
+    controller = ctx.controller
+    if controller is not None:
+        await controller.advance(chat_id)
+
+
+def make_backend_factory(video_enabled: bool):
+    backends = {}
+
+    def factory(state):
+        backend = backends.get(state.slot)
+        if backend is None:
+            backend = PyTgCallsBackend(
+                state,
+                on_stream_end=on_stream_end,
+                video_enabled=video_enabled,
+            )
+            backends[state.slot] = backend
+        return backend
+
+    return factory
+
+
 class Player:
     def __init__(
         self,

@@ -69,6 +69,15 @@ async def _announce_in_lang(bot, chat_id: int, item) -> None:
         _drop_card(card)
 
 
+async def on_track_start(chat_id: int, item) -> None:
+    if getattr(item, 'requested_by', '') != 'autoplay':
+        return
+    try:
+        await announce_autoplay(chat_id, item)
+    except Exception as exc:
+        logger.warning('autoplay announce failed for %s: %s', chat_id, type(exc).__name__)
+
+
 @require_group
 @require_control
 async def autoplay_cmd(client, message) -> None:
