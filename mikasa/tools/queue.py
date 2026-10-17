@@ -1,4 +1,5 @@
 import asyncio
+import random
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Optional
@@ -57,6 +58,14 @@ class Queue:
                     del state.items[index]
                     return True
             return False
+
+    async def shuffle(self, chat_id: int) -> int:
+        async with self._lock:
+            state = self._chats.get(chat_id)
+            if not state or not state.items:
+                return 0
+            random.shuffle(state.items)
+            return len(state.items)
 
     async def clear(self, chat_id: int) -> int:
         async with self._lock:
