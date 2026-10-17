@@ -13,10 +13,10 @@ You add the bot to a group, start a voice chat, and use `/play` or `/search`. Th
 - Play by song name, YouTube link / playlist, direct audio/video URL, or by replying to a file
 - YouTube playlists auto-expand (first song plays, rest queue up)
 - `/search` with tap-to-play buttons
-- Queue, skip, pause, resume, stop, seek/seekback, loop, force-play (`-f`, `/playforce`), video mode (`/vplay`, `-v`)
+- Queue with `/remove` and `/shuffle`, skip, pause, resume, stop, seek/seekback, loop, force-play (`-f`, `/playforce`), video mode (`/vplay`, `-v`)
 - Autoplay: keeps playing related songs when the queue ends, with same-song protection
 - Live progress bar on the player card, updated every few seconds
-- Per-group language with `/lang` (English + Burmese so far)
+- Per-group settings with `/settings`: play mode (admins only or everyone) and language (English + Burmese so far)
 - Inline control buttons under the now-playing card
 - Sticky multi-assistant pool (up to 5 assistants, each group sticks to its own)
 - Persistent download cache, thumbnail cards
@@ -94,6 +94,8 @@ docker run -d --env-file .env mikasatunes
 | `/playforce`, `/vplayforce` (or `-f` flag) | Stop current and play right now |
 | `/search <song>` | Show 5 tap-to-play results |
 | `/queue`, `/playing` | Show what's playing and queued |
+| `/remove <position>` | Remove the queued track at that position (admins) |
+| `/shuffle` | Shuffle the waiting queue (admins) |
 | `/pause`, `/resume` | Pause / resume |
 | `/skip`, `/next` | Skip to next |
 | `/stop`, `/end` | Stop and leave the voice chat |
@@ -101,6 +103,7 @@ docker run -d --env-file .env mikasatunes
 | `/loop <count\|off>` | Replay the current song |
 | `/autoplay <on\|off>` | Keep playing related songs when the queue ends |
 | `/lang`, `/language` | Group language (English, Burmese) |
+| `/settings`, `/playmode` | Group settings: play mode and language (admins) |
 | `/ping`, `/alive` | Latency, uptime, CPU/RAM/disk |
 | `/stats` | Bot stats (extra system info for owner) |
 | `/ac`, `/activevc` | Active streams (owner) |
@@ -111,7 +114,7 @@ docker run -d --env-file .env mikasatunes
 | `/broadcast` | Broadcast a replied message (owner) |
 | `/eval`, `/logs`, `/logger`, `/restart` | Owner tools |
 
-Pause/skip/stop and the buttons under the player card need an admin (or the owner, a sudo user, or an authorized user).
+Pause/skip/stop, `/remove`, `/shuffle` and the buttons under the player card need an admin (or the owner, a sudo user, or an authorized user).
 
 ## Project layout
 
