@@ -250,7 +250,16 @@ class Player:
         self._autoplay: set[int] = set()
         self._last: dict[int, MediaItem] = {}
         self._recent: dict[int, dict] = {}
+        self._warned: dict[int, tuple] = {}
         self._closed = False
+
+    def _log_once(self, chat_id: int, reason: str) -> bool:
+        now = time.monotonic()
+        last_reason, last_time = self._warned.get(chat_id, ('', 0.0))
+        if last_reason == reason and now - last_time < 300:
+            return False
+        self._warned[chat_id] = (reason, now)
+        return True
 
     def _lock(self, chat_id: int) -> asyncio.Lock:
         lock = self._locks.get(chat_id)
@@ -604,6 +613,7 @@ class Player:
         self._autoplay.clear()
         self._last.clear()
         self._recent.clear()
+        self._warned.clear()
 
     def _cleanup_temp_root(self) -> None:
         if not self._temp_root.exists():
@@ -634,7 +644,8 @@ class Player:
                 await self._discard_file(chat_id, item)
                 raise
             except Exception as exc:
-                logger.warning('playback failed for %s: %s', chat_id, type(exc).__name__)
+                if self._log_once(chat_id, type(exc).__name__):
+                    logger.warning('playback failed for %s: %s', chat_id, type(exc).__name__)
                 await self._discard_file(chat_id, item)
                 continue
             self._current[chat_id] = item

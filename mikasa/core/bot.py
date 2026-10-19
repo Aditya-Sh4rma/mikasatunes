@@ -14,6 +14,7 @@ class MusicBot(pyrogram.Client):
             parse_mode=pyrogram.enums.ParseMode.HTML,
             link_preview_options=pyrogram.types.LinkPreviewOptions(is_disabled=True),
             max_concurrent_transmissions=4,
+            sleep_threshold=60,
         )
         self.settings = settings
         self.log = get_logger("mikasa.bot")
@@ -23,6 +24,17 @@ class MusicBot(pyrogram.Client):
         me = self.me
         self.log.info("bot online as %s", me.username or me.id)
         await self._announce()
+
+    def watch_errors(self) -> None:
+        from pyrogram.handlers import ErrorHandler
+
+        async def report(client, error, handler, update, users, chats):
+            detail = str(error).strip().splitlines()[0][:120] if str(error) else ""
+            self.log.warning(
+                "%s in %s: %s", type(error).__name__, type(handler).__name__, detail
+            )
+
+        self.add_handler(ErrorHandler(report))
 
     async def _announce(self) -> None:
         try:

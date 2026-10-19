@@ -173,10 +173,13 @@ async def _fail(sent, message, key: str, markup=None, **kwargs) -> None:
             return
         except Exception:
             pass
-    if markup is None:
-        await message.reply_text(text)
-    else:
-        await message.reply_text(text, reply_markup=markup)
+    try:
+        if markup is None:
+            await message.reply_text(text)
+        else:
+            await message.reply_text(text, reply_markup=markup)
+    except Exception:
+        pass
 
 
 def _start_labels() -> dict:

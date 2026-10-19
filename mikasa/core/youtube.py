@@ -13,6 +13,24 @@ from ..tools.utils import parse_duration, safe_stem
 logger = get_logger('mikasa.core.youtube')
 
 
+class _YdlLogger:
+    def __init__(self) -> None:
+        self.last = ''
+
+    def debug(self, msg):
+        pass
+
+    def info(self, msg):
+        pass
+
+    def warning(self, msg):
+        pass
+
+    def error(self, msg):
+        if not self.last:
+            self.last = str(msg).strip().splitlines()[0]
+
+
 def parse_video_id(value: Optional[str]) -> Optional[str]:
     if not value:
         return None
@@ -272,20 +290,26 @@ class YouTube:
     @staticmethod
     def _default_downloader(url, output_template, audio_only, cookies_file=None):
         import yt_dlp
+        output = _YdlLogger()
         options = {
             'outtmpl': output_template,
             'quiet': True,
             'no_warnings': True,
             'noprogress': True,
             'noplaylist': True,
+            'logger': output,
         }
         if audio_only:
             options['format'] = 'bestaudio/best'
         if cookies_file:
             options['cookiefile'] = cookies_file
-        with yt_dlp.YoutubeDL(options) as ydl:
-            info = ydl.extract_info(url, download=True)
-            return Path(ydl.prepare_filename(info))
+        try:
+            with yt_dlp.YoutubeDL(options) as ydl:
+                info = ydl.extract_info(url, download=True)
+                return Path(ydl.prepare_filename(info))
+        except Exception as exc:
+            reason = output.last or type(exc).__name__
+            raise DownloadError(reason[:160]) from exc
 
     @staticmethod
     def _to_track(component: Any) -> Optional[Track]:

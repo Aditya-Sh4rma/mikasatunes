@@ -1,3 +1,4 @@
+import time
 from html import escape as html_escape
 from pathlib import Path
 from urllib.parse import urlparse
@@ -36,6 +37,8 @@ from .common import (
 )
 
 logger = get_logger('mikasa.plugins.play')
+
+_invite_warned: dict = {}
 
 
 def _play_flags(command, text: str) -> tuple:
@@ -141,7 +144,10 @@ async def _ensure_assistant(chat_id: int) -> None:
         try:
             invite = await export_link(chat_id)
         except ChatAdminRequired:
-            logger.warning('cannot invite assistant to %s: bot lacks permission', chat_id)
+            now = time.monotonic()
+            if now - _invite_warned.get(chat_id, 0) > 3600:
+                _invite_warned[chat_id] = now
+                logger.warning('cannot invite assistant to %s: bot lacks permission', chat_id)
             return
         except Exception as exc:
             logger.warning('invite link failed for %s: %s', chat_id, type(exc).__name__)

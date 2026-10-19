@@ -74,6 +74,7 @@ async def boot() -> dict:
 
     loaded = load_plugins(bot)
     log.info("plugins loaded: %s", ",".join(loaded))
+    bot.watch_errors()
 
     try:
         await database.connect()

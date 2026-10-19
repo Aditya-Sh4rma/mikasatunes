@@ -2,6 +2,7 @@ import asyncio
 from typing import Awaitable, Callable, Optional
 
 from pyrogram import enums
+from pyrogram.errors import MessageIdInvalid, MessageNotModified
 
 from ..logging_config import get_logger
 from ..tools.utils import progress_text
@@ -170,6 +171,11 @@ async def timer_tick(bot, controller, language, default_lang: str = "en") -> lis
                 _current_lang.reset(token)
             try:
                 await bot.edit_message_reply_markup(chat_id, message_id, reply_markup=markup)
+            except MessageIdInvalid:
+                item.message_id = 0
+                continue
+            except MessageNotModified:
+                continue
             except Exception as exc:
                 logger.warning("timer edit failed for %s: %s", chat_id, type(exc).__name__)
                 continue
